@@ -1,20 +1,16 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct JourneeApp: App {
     var body: some Scene {
         WindowGroup {
-            TabView {
-                JournalView()
-                    .tabItem {
-                        Label("Journal", systemImage: "pencil")
-                    }
-                
-                HistoryView()
-                    .tabItem {
-                        Label("History", systemImage: "clock")
-                    }
-            }
+            DashboardView()
         }
+        .modelContainer(for: [
+            Expense.self,
+            Category.self,
+            MonthlyBudget.self,
+        ])
     }
 }
