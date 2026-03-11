@@ -3,6 +3,7 @@ import SwiftUI
 struct CalendarGridView: View {
     let selectedMonth: Date
     let dailyTotals: [Int: Double]
+    var onDayTapped: ((Int) -> Void)?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
     private let weekdaySymbols = Calendar.current.veryShortWeekdaySymbols
@@ -47,11 +48,16 @@ struct CalendarGridView: View {
 
                 // Actual days
                 ForEach(1...daysInMonth, id: \.self) { day in
-                    DayCellView(
-                        day: day,
-                        total: dailyTotals[day],
-                        isToday: day == todayDay
-                    )
+                    Button {
+                        onDayTapped?(day)
+                    } label: {
+                        DayCellView(
+                            day: day,
+                            total: dailyTotals[day],
+                            isToday: day == todayDay
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

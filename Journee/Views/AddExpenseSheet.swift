@@ -6,6 +6,8 @@ struct AddExpenseSheet: View {
     @Environment(\.modelContext) private var modelContext
 
     var viewModel: DashboardViewModel
+    var existingExpense: Expense? = nil
+    var prefilledDate: Date? = nil
 
     @State private var amountText: String = ""
     @State private var note: String = ""
@@ -29,6 +31,8 @@ struct AddExpenseSheet: View {
         "F472B6", "34D399", "6366F1", "F97316",
         "06B6D4", "9CA3AF",
     ]
+
+    private var isEditing: Bool { existingExpense != nil }
 
     private var isValid: Bool {
         guard let val = Double(amountText), val > 0 else { return false }
@@ -139,7 +143,7 @@ struct AddExpenseSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Add Expense")
+            .navigationTitle(isEditing ? "Edit Expense" : "Add Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -148,20 +152,53 @@ struct AddExpenseSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        guard let amount = Double(amountText) else { return }
-                        viewModel.saveExpense(
-                            amount: amount,
-                            date: selectedDate,
-                            note: note.isEmpty ? nil : note,
-                            category: selectedCategory
-                        )
-                        dismiss()
+                        saveExpense()
                     }
                     .font(.system(.body, design: .rounded, weight: .semibold))
                     .disabled(!isValid)
                 }
             }
+            .onAppear {
+                prefillFields()
+            }
         }
+    }
+
+    // MARK: - Prefill
+
+    private func prefillFields() {
+        if let expense = existingExpense {
+            amountText = String(format: "%.0f", expense.amount)
+            note = expense.note ?? ""
+            selectedCategory = expense.category
+            selectedDate = expense.date
+        } else if let date = prefilledDate {
+            selectedDate = date
+        }
+    }
+
+    // MARK: - Save
+
+    private func saveExpense() {
+        guard let amount = Double(amountText) else { return }
+
+        if let expense = existingExpense {
+            viewModel.updateExpense(
+                expense,
+                amount: amount,
+                date: selectedDate,
+                note: note.isEmpty ? nil : note,
+                category: selectedCategory
+            )
+        } else {
+            viewModel.saveExpense(
+                amount: amount,
+                date: selectedDate,
+                note: note.isEmpty ? nil : note,
+                category: selectedCategory
+            )
+        }
+        dismiss()
     }
 
     // MARK: - New Category Form

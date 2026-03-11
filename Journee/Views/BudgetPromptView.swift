@@ -4,6 +4,7 @@ struct BudgetPromptView: View {
     @State private var budgetText: String = ""
     @State private var shake: Bool = false
     var onSave: (Double) -> Void
+    var onSkip: (() -> Void)? = nil
 
     private var isValidAmount: Bool {
         guard let val = Double(budgetText), val > 0 else { return false }
@@ -81,10 +82,20 @@ struct BudgetPromptView: View {
                         )
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+
+                if let onSkip {
+                    Button {
+                        onSkip()
+                    } label: {
+                        Text("Skip")
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer().frame(height: 32)
             }
         }
-        .interactiveDismissDisabled()
     }
 }
 

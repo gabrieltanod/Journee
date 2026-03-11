@@ -27,121 +27,129 @@ struct DashboardView: View {
 struct DashboardContent: View {
     @Bindable var viewModel: DashboardViewModel
 
-    var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
+    @State private var selectedDay: Int?
+    @State private var showAddExpense: Bool = false
 
+    var body: some View {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    headerSection
                     budgetCard
                     calendarSection
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 100)
+                .padding(.bottom, 40)
             }
-
-            // FAB
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
+            .background(Color(.systemBackground))
+            .navigationTitle("Journee")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        viewModel.showAddExpense = true
+                        showAddExpense = true
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 56, height: 56)
-                            .background(
-                                Circle()
-                                    .fill(Color.primary)
-                                    .shadow(color: .primary.opacity(0.25), radius: 12, y: 6)
-                            )
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 32)
                 }
             }
-        }
-        .fullScreenCover(isPresented: $viewModel.showBudgetPrompt) {
-            BudgetPromptView { amount in
-                viewModel.saveBudget(amount: amount)
+            .navigationDestination(item: $selectedDay) { day in
+                DailyDetailView(
+                    viewModel: viewModel,
+                    date: dateForDay(day)
+                )
             }
         }
-        .sheet(isPresented: $viewModel.showAddExpense) {
+        .sheet(isPresented: $viewModel.showBudgetPrompt) {
+            BudgetPromptView(
+                onSave: { amount in
+                    viewModel.saveBudget(amount: amount)
+                },
+                onSkip: {
+                    viewModel.showBudgetPrompt = false
+                }
+            )
+        }
+        .sheet(isPresented: $showAddExpense) {
             AddExpenseSheet(viewModel: viewModel)
                 .presentationDetents([.large])
         }
-    }
-
-    // MARK: - Header
-
-    @ViewBuilder
-    private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Journee")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-
-                Text(currentDateString())
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 32))
-                .foregroundStyle(.primary.opacity(0.15))
-        }
-        .padding(.top, 12)
-    }
-
-    private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: Date())
     }
 
     // MARK: - Budget Card
 
     private var budgetCard: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text("Remaining")
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .foregroundStyle(.secondary)
+            if viewModel.hasBudget {
+                // Budget is set — show remaining + progress
+                VStack(spacing: 4) {
+                    Text("Remaining")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
 
-                Text(formattedCurrency(viewModel.remainingBudget))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(viewModel.isOverBudget ? .red : .primary)
-            }
-
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(Color(.tertiarySystemFill))
-
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(progressColor(viewModel.spentPercentage))
-                        .frame(width: geo.size.width * viewModel.spentPercentage)
-                        .animation(.easeInOut(duration: 0.4), value: viewModel.spentPercentage)
+                    Text(formattedCurrency(viewModel.remainingBudget))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(viewModel.isOverBudget ? .red : .primary)
                 }
-            }
-            .frame(height: 6)
 
-            HStack {
-                Label(formattedCurrency(viewModel.totalSpent), systemImage: "arrow.up.right")
-                    .font(.system(.caption2, design: .rounded, weight: .medium))
-                    .foregroundStyle(.secondary)
+                // Progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color(.tertiarySystemFill))
 
-                Spacer()
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(progressColor(viewModel.spentPercentage))
+                            .frame(width: geo.size.width * viewModel.spentPercentage)
+                            .animation(.easeInOut(duration: 0.4), value: viewModel.spentPercentage)
+                    }
+                }
+                .frame(height: 6)
 
-                Label(formattedCurrency(viewModel.budgetAmount), systemImage: "target")
-                    .font(.system(.caption2, design: .rounded, weight: .medium))
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Label(formattedCurrency(viewModel.totalSpent), systemImage: "arrow.up.right")
+                        .font(.system(.caption2, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Label(formattedCurrency(viewModel.budgetAmount), systemImage: "target")
+                        .font(.system(.caption2, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                // Edit budget button
+                Button {
+                    viewModel.showBudgetPrompt = true
+                } label: {
+                    Label("Edit Budget", systemImage: "pencil")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                // No budget set — show spent only + option to set budget
+                VStack(spacing: 4) {
+                    Text("Spent This Month")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text(formattedCurrency(viewModel.totalSpent))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                }
+
+                Button {
+                    viewModel.showBudgetPrompt = true
+                } label: {
+                    Label("Set Monthly Budget", systemImage: "plus.circle")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.primary.opacity(0.6))
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                        )
+                }
             }
         }
         .padding(20)
@@ -194,7 +202,10 @@ struct DashboardContent: View {
 
             CalendarGridView(
                 selectedMonth: viewModel.selectedMonth,
-                dailyTotals: viewModel.dailyTotals
+                dailyTotals: viewModel.dailyTotals,
+                onDayTapped: { day in
+                    selectedDay = day
+                }
             )
         }
         .padding(20)
@@ -204,7 +215,14 @@ struct DashboardContent: View {
         )
     }
 
-    // MARK: - Formatting
+    // MARK: - Helpers
+
+    private func dateForDay(_ day: Int) -> Date {
+        let calendar = Calendar.current
+        var comps = calendar.dateComponents([.year, .month], from: viewModel.selectedMonth)
+        comps.day = day
+        return calendar.date(from: comps) ?? viewModel.selectedMonth
+    }
 
     private func formattedCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()

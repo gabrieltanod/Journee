@@ -25,7 +25,6 @@ final class DashboardViewModel {
         loadBudget()
         loadExpenses()
         loadCategories()
-        checkBudgetPrompt()
     }
 
     private func loadBudget() {
@@ -61,8 +60,8 @@ final class DashboardViewModel {
         categories = (try? modelContext.fetch(descriptor)) ?? []
     }
 
-    private func checkBudgetPrompt() {
-        showBudgetPrompt = currentBudget == nil
+    var hasBudget: Bool {
+        currentBudget != nil
     }
 
     private func seedCategoriesIfNeeded() {
@@ -146,9 +145,14 @@ final class DashboardViewModel {
         let month = calendar.component(.month, from: selectedMonth)
         let year = calendar.component(.year, from: selectedMonth)
 
-        let budget = MonthlyBudget(month: month, year: year, amount: amount)
-        modelContext.insert(budget)
+        if let existing = currentBudget {
+            existing.amount = amount
+        } else {
+            let budget = MonthlyBudget(month: month, year: year, amount: amount)
+            modelContext.insert(budget)
+        }
         try? modelContext.save()
+        showBudgetPrompt = false
         loadData()
     }
 
@@ -159,6 +163,26 @@ final class DashboardViewModel {
         modelContext.insert(expense)
         try? modelContext.save()
         loadData()
+    }
+
+    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?) {
+        expense.amount = amount
+        expense.date = date
+        expense.note = note
+        expense.category = category
+        try? modelContext.save()
+        loadData()
+    }
+
+    func deleteExpense(_ expense: Expense) {
+        modelContext.delete(expense)
+        try? modelContext.save()
+        loadData()
+    }
+
+    func expenses(for date: Date) -> [Expense] {
+        let calendar = Calendar.current
+        return expenses.filter { calendar.isDate($0.date, inSameDayAs: date) }
     }
 
     func addCategory(name: String, icon: String, colorHex: String) {
