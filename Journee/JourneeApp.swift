@@ -5,7 +5,17 @@ import SwiftData
 struct JourneeApp: App {
     var body: some Scene {
         WindowGroup {
-            DashboardView()
+            TabView {
+                DashboardView()
+                    .tabItem {
+                        Label("Tracker", systemImage: "list.bullet")
+                    }
+
+                InsightsView()
+                    .tabItem {
+                        Label("Insights", systemImage: "chart.pie.fill")
+                    }
+            }
         }
         .modelContainer(for: [
             Expense.self,
