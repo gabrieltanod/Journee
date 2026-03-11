@@ -186,14 +186,13 @@ struct InsightsContent: View {
     private var categoryListCard: some View {
         VStack(spacing: 0) {
             ForEach(Array(viewModel.categoryBreakdown.enumerated()), id: \.element.id) { index, slice in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        if viewModel.selectedSlice?.name == slice.name {
-                            viewModel.selectedSlice = nil
-                        } else {
-                            viewModel.selectedSlice = slice
-                        }
-                    }
+                NavigationLink {
+                    CategoryDetailView(
+                        categoryName: slice.name,
+                        categoryIcon: slice.icon,
+                        categoryColorHex: slice.colorHex,
+                        selectedMonth: viewModel.selectedMonth
+                    )
                 } label: {
                     HStack(spacing: 12) {
                         // Color dot
@@ -216,14 +215,13 @@ struct InsightsContent: View {
                         Text(formattedCurrency(slice.amount))
                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             .foregroundStyle(.primary)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.primary.opacity(0.25))
                     }
                     .padding(.vertical, 14)
                     .padding(.horizontal, 16)
-                    .background(
-                        viewModel.selectedSlice?.name == slice.name
-                            ? Color.primary.opacity(0.05)
-                            : Color.clear
-                    )
                 }
                 .buttonStyle(.plain)
 
