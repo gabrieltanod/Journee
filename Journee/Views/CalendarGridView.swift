@@ -26,11 +26,25 @@ struct CalendarGridView: View {
         return calendar.component(.day, from: Date())
     }
 
+    /// A unified array of cell models: nil = empty spacer, Int = day number
+    private var calendarCells: [CalendarCell] {
+        var cells: [CalendarCell] = []
+        // Leading empty cells
+        for i in 0..<firstWeekday {
+            cells.append(CalendarCell(id: -i - 1, day: nil))
+        }
+        // Day cells
+        for day in 1...daysInMonth {
+            cells.append(CalendarCell(id: day, day: day))
+        }
+        return cells
+    }
+
     var body: some View {
         VStack(spacing: 8) {
-            // Weekday headers
+            // Weekday headers — use Array.indices to avoid duplicate-ID issue
             LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(weekdaySymbols, id: \.self) { symbol in
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
                         .font(.system(.caption2, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -38,30 +52,33 @@ struct CalendarGridView: View {
                 }
             }
 
-            // Day cells
+            // Day cells — single ForEach with unique IDs
             LazyVGrid(columns: columns, spacing: 2) {
-                // Empty cells before the 1st
-                ForEach(0..<firstWeekday, id: \.self) { _ in
-                    Color.clear
-                        .frame(height: 56)
-                }
-
-                // Actual days
-                ForEach(1...daysInMonth, id: \.self) { day in
-                    Button {
-                        onDayTapped?(day)
-                    } label: {
-                        DayCellView(
-                            day: day,
-                            total: dailyTotals[day],
-                            isToday: day == todayDay
-                        )
+                ForEach(calendarCells) { cell in
+                    if let day = cell.day {
+                        Button {
+                            onDayTapped?(day)
+                        } label: {
+                            DayCellView(
+                                day: day,
+                                total: dailyTotals[day],
+                                isToday: day == todayDay
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Color.clear
+                            .frame(height: 56)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
     }
+}
+
+private struct CalendarCell: Identifiable {
+    let id: Int
+    let day: Int?
 }
 
 // MARK: - Day Cell
