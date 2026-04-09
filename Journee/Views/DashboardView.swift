@@ -118,6 +118,9 @@ struct DashboardContent: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Summary row: Income & Spent
+                summaryRow
+
                 // Edit budget button
                 Button {
                     viewModel.showBudgetPrompt = true
@@ -136,6 +139,9 @@ struct DashboardContent: View {
                     Text(formattedCurrency(viewModel.totalSpent))
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                 }
+
+                // Summary row: Income & Spent
+                summaryRow
 
                 Button {
                     viewModel.showBudgetPrompt = true
@@ -156,6 +162,58 @@ struct DashboardContent: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    // MARK: - Summary Row
+
+    private var summaryRow: some View {
+        HStack(spacing: 0) {
+            // Total Income
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.left")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color(hex: "22C55E"))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Income")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+
+                    Text(formattedCurrency(viewModel.totalIncome))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Color(hex: "22C55E"))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(width: 1, height: 28)
+
+            // Total Spent
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Spent")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+
+                    Text(formattedCurrency(viewModel.totalSpent))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 16)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.tertiarySystemFill))
         )
     }
 

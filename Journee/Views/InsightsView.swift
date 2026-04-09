@@ -35,6 +35,11 @@ struct InsightsContent: View {
                     monthNavigator
                     donutChartCard
                     categoryListCard
+
+                    // Total Income section
+                    if viewModel.totalIncome > 0 {
+                        incomeCard
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
@@ -235,6 +240,60 @@ struct InsightsContent: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
+    }
+
+    // MARK: - Income Card
+
+    private var incomeCard: some View {
+        NavigationLink {
+            CategoryDetailView(
+                categoryName: "Income",
+                categoryIcon: "banknote.fill",
+                categoryColorHex: "22C55E",
+                selectedMonth: viewModel.selectedMonth
+            )
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.down.left")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(hex: "22C55E"))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Total Income")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.primary)
+
+                    Text("This month")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(formattedCurrency(viewModel.totalIncome))
+                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color(hex: "22C55E"))
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.25))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(hex: "22C55E").opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color(hex: "22C55E").opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers

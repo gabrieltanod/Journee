@@ -16,6 +16,10 @@ struct CategoryDetailView: View {
         categoryName == "Uncategorized"
     }
 
+    private var isIncomeCategory: Bool {
+        categoryName == "Income"
+    }
+
     var body: some View {
         Group {
             if expenses.isEmpty {
@@ -54,10 +58,12 @@ struct CategoryDetailView: View {
         )
         let allExpenses = (try? modelContext.fetch(descriptor)) ?? []
 
-        if isUncategorized {
-            expenses = allExpenses.filter { $0.category == nil }
+        if isIncomeCategory {
+            expenses = allExpenses.filter { $0.isIncome }
+        } else if isUncategorized {
+            expenses = allExpenses.filter { $0.category == nil && !$0.isIncome }
         } else {
-            expenses = allExpenses.filter { $0.category?.name == categoryName }
+            expenses = allExpenses.filter { $0.category?.name == categoryName && !$0.isIncome }
         }
     }
 
@@ -71,7 +77,7 @@ struct CategoryDetailView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(Color(hex: categoryColorHex).opacity(0.3))
 
-            Text("No expenses")
+            Text(isIncomeCategory ? "No income" : "No expenses")
                 .font(.system(.body, design: .rounded, weight: .medium))
                 .foregroundStyle(.secondary)
 
@@ -96,12 +102,13 @@ struct CategoryDetailView: View {
                         )
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(expenses.count) expense\(expenses.count == 1 ? "" : "s")")
+                        Text("\(expenses.count) \(isIncomeCategory ? "entry" : "expense")\(expenses.count == 1 ? "" : (isIncomeCategory ? "" : "s"))")
                             .font(.system(.subheadline, design: .rounded, weight: .medium))
                             .foregroundStyle(.secondary)
 
                         Text(formattedCurrency(expenses.reduce(0) { $0 + $1.amount }))
                             .font(.system(.title3, design: .rounded, weight: .bold))
+                            .foregroundStyle(isIncomeCategory ? Color(hex: "22C55E") : .primary)
                     }
 
                     Spacer()
@@ -174,7 +181,7 @@ struct CategoryExpenseRow: View {
 
             Text(formattedCurrency(expense.amount))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
         }
         .padding(.vertical, 4)
     }
@@ -208,6 +215,7 @@ struct CategoryExpenseEditSheet: View {
     @State private var selectedDate: Date = Date()
     @State private var selectedCategory: Category?
     @State private var categories: [Category] = []
+    @State private var isIncome: Bool = false
 
     private var isValid: Bool {
         guard let val = Double(amountText), val > 0 else { return false }
@@ -218,6 +226,22 @@ struct CategoryExpenseEditSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
+                    // Type picker (Income / Expense)
+                    Picker("Type", selection: $isIncome) {
+                        Text("Expense").tag(false)
+                        Text("Income").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: isIncome) { _, newValue in
+                        if newValue {
+                            selectedCategory = categories.first(where: { $0.name == "Income" })
+                        } else {
+                            if selectedCategory?.name == "Income" {
+                                selectedCategory = nil
+                            }
+                        }
+                    }
+
                     // Amount
                     VStack(spacing: 8) {
                         Text("Amount")
@@ -240,28 +264,52 @@ struct CategoryExpenseEditSheet: View {
                             .frame(height: 1)
                     }
 
-                    // Category
-                    VStack(spacing: 8) {
-                        Text("Category")
-                            .font(.system(.caption, design: .rounded, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    // Category (hidden when Income)
+                    if !isIncome {
+                        VStack(spacing: 8) {
+                            Text("Category")
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(categories, id: \.id) { category in
-                                    CategoryChip(
-                                        category: category,
-                                        isSelected: selectedCategory?.id == category.id
-                                    )
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.15)) {
-                                            selectedCategory = category
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(categories.filter { $0.name != "Income" }, id: \.id) { category in
+                                        CategoryChip(
+                                            category: category,
+                                            isSelected: selectedCategory?.id == category.id
+                                        )
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                selectedCategory = category
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    } else {
+                        // Show income category indicator
+                        HStack(spacing: 8) {
+                            Image(systemName: "banknote.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color(hex: "22C55E"))
+
+                            Text("Income")
+                                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color(hex: "22C55E"))
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color(hex: "22C55E").opacity(0.1))
+                        )
                     }
 
                     // Note
@@ -295,7 +343,7 @@ struct CategoryExpenseEditSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Edit Expense")
+            .navigationTitle(isIncome ? "Edit Income" : "Edit Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -315,6 +363,7 @@ struct CategoryExpenseEditSheet: View {
                 note = expense.note ?? ""
                 selectedDate = expense.date
                 selectedCategory = expense.category
+                isIncome = expense.isIncome
                 loadCategories()
             }
         }
@@ -331,6 +380,7 @@ struct CategoryExpenseEditSheet: View {
         expense.date = selectedDate
         expense.note = note.isEmpty ? nil : note
         expense.category = selectedCategory
+        expense.isIncome = isIncome
         try? modelContext.save()
         onSave()
         dismiss()

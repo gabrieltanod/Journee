@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CalendarGridView: View {
     let selectedMonth: Date
-    let dailyTotals: [Int: Double]
+    let dailyTotals: [Int: DailyTotal]
     var onDayTapped: ((Int) -> Void)?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
@@ -61,7 +61,7 @@ struct CalendarGridView: View {
                         } label: {
                             DayCellView(
                                 day: day,
-                                total: dailyTotals[day],
+                                dailyTotal: dailyTotals[day],
                                 isToday: day == todayDay
                             )
                         }
@@ -85,21 +85,46 @@ private struct CalendarCell: Identifiable {
 
 struct DayCellView: View {
     let day: Int
-    let total: Double?
+    let dailyTotal: DailyTotal?
     let isToday: Bool
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
             Text("\(day)")
                 .font(.system(.caption, design: .rounded, weight: isToday ? .bold : .regular))
                 .foregroundStyle(isToday ? .white : .primary)
 
-            if let total, total > 0 {
-                Text(formattedAmount(total))
-                    .font(.system(size: 8, weight: .medium, design: .rounded))
-                    .foregroundStyle(isToday ? .white.opacity(0.8) : .orange)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+            if let total = dailyTotal {
+                if total.income > 0 && total.expense > 0 {
+                    // Both: green income on top, orange expense on bottom
+                    VStack(spacing: 0) {
+                        Text(formattedAmount(total.income))
+                            .font(.system(size: 7, weight: .medium, design: .rounded))
+                            .foregroundStyle(isToday ? .white.opacity(0.8) : Color(hex: "22C55E"))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+
+                        Text(formattedAmount(total.expense))
+                            .font(.system(size: 7, weight: .medium, design: .rounded))
+                            .foregroundStyle(isToday ? .white.opacity(0.8) : .orange)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                    }
+                } else if total.income > 0 {
+                    // Income only — green
+                    Text(formattedAmount(total.income))
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundStyle(isToday ? .white.opacity(0.8) : Color(hex: "22C55E"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                } else if total.expense > 0 {
+                    // Expense only — orange (original behavior)
+                    Text(formattedAmount(total.expense))
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundStyle(isToday ? .white.opacity(0.8) : .orange)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
             }
         }
         .frame(maxWidth: .infinity)

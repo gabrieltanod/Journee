@@ -9,6 +9,7 @@ final class InsightsViewModel {
     var selectedMonth: Date = Date()
     var categoryBreakdown: [CategorySlice] = []
     var selectedSlice: CategorySlice?
+    var totalIncome: Double = 0
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -30,12 +31,18 @@ final class InsightsViewModel {
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.date >= start && $0.date <= end }
         )
-        let expenses = (try? modelContext.fetch(descriptor)) ?? []
+        let allItems = (try? modelContext.fetch(descriptor)) ?? []
 
-        // Group by category
+        // Separate income and expenses
+        let expenseItems = allItems.filter { !$0.isIncome }
+        let incomeItems = allItems.filter { $0.isIncome }
+
+        totalIncome = incomeItems.reduce(0) { $0 + $1.amount }
+
+        // Group expenses by category (income excluded from chart)
         var grouped: [String: (amount: Double, icon: String, colorHex: String)] = [:]
 
-        for expense in expenses {
+        for expense in expenseItems {
             let name = expense.category?.name ?? "Uncategorized"
             let icon = expense.category?.icon ?? "questionmark.circle.fill"
             let colorHex = expense.category?.colorHex ?? "9CA3AF"
@@ -115,4 +122,3 @@ struct CategorySlice: Identifiable, Equatable {
         lhs.name == rhs.name && lhs.amount == rhs.amount
     }
 }
-

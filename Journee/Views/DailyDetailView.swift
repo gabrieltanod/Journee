@@ -51,7 +51,7 @@ struct DailyDetailView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.primary.opacity(0.12))
 
-            Text("No expenses yet")
+            Text("No entries yet")
                 .font(.system(.body, design: .rounded, weight: .medium))
                 .foregroundStyle(.secondary)
 
@@ -61,7 +61,7 @@ struct DailyDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Add Expense")
+                    Text("Add Entry")
                         .font(.system(.body, design: .rounded, weight: .semibold))
                 }
                 .foregroundStyle(.white)
@@ -142,9 +142,20 @@ struct ExpenseRow: View {
 
             // Details
             VStack(alignment: .leading, spacing: 2) {
-                Text(expense.category?.name ?? "Uncategorized")
-                    .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(expense.category?.name ?? "Uncategorized")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.primary)
+
+                    if expense.isIncome {
+                        Text("INCOME")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color(hex: "22C55E")))
+                    }
+                }
 
                 if let note = expense.note, !note.isEmpty {
                     Text(note)
@@ -156,10 +167,10 @@ struct ExpenseRow: View {
 
             Spacer()
 
-            // Amount
+            // Amount — green for income, default for expense
             Text(formattedCurrency(expense.amount))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
         }
         .padding(.vertical, 4)
     }

@@ -14,6 +14,7 @@ struct AddExpenseSheet: View {
     @State private var selectedCategory: Category?
     @State private var selectedDate: Date = Date()
     @State private var showNewCategory: Bool = false
+    @State private var isIncome: Bool = false
 
     // New category form
     @State private var newCategoryName: String = ""
@@ -44,6 +45,25 @@ struct AddExpenseSheet: View {
             ScrollView {
                 VStack(spacing: 24) {
 
+                    // Type picker (Income / Expense)
+                    Picker("Type", selection: $isIncome) {
+                        Text("Expense").tag(false)
+                        Text("Income").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: isIncome) { _, newValue in
+                        if newValue {
+                            // Auto-select Income category
+                            selectedCategory = viewModel.incomeCategory()
+                            showNewCategory = false
+                        } else {
+                            // Clear auto-set category so user picks one
+                            if selectedCategory?.name == "Income" {
+                                selectedCategory = nil
+                            }
+                        }
+                    }
+
                     // Amount
                     VStack(spacing: 8) {
                         Text("Amount")
@@ -66,50 +86,74 @@ struct AddExpenseSheet: View {
                             .frame(height: 1)
                     }
 
-                    // Category picker
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Category")
-                                .font(.system(.caption, design: .rounded, weight: .medium))
-                                .foregroundStyle(.secondary)
+                    // Category picker (hidden when Income is selected)
+                    if !isIncome {
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text("Category")
+                                    .font(.system(.caption, design: .rounded, weight: .medium))
+                                    .foregroundStyle(.secondary)
 
-                            Spacer()
+                                Spacer()
 
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showNewCategory.toggle()
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showNewCategory.toggle()
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: showNewCategory ? "xmark" : "plus")
+                                            .font(.caption2)
+                                        Text(showNewCategory ? "Cancel" : "New")
+                                            .font(.system(.caption, design: .rounded, weight: .medium))
+                                    }
+                                    .foregroundStyle(.primary.opacity(0.6))
                                 }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: showNewCategory ? "xmark" : "plus")
-                                        .font(.caption2)
-                                    Text(showNewCategory ? "Cancel" : "New")
-                                        .font(.system(.caption, design: .rounded, weight: .medium))
-                                }
-                                .foregroundStyle(.primary.opacity(0.6))
                             }
-                        }
 
-                        if showNewCategory {
-                            newCategoryForm
-                        }
+                            if showNewCategory {
+                                newCategoryForm
+                            }
 
-                        // Category chips
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(viewModel.categories, id: \.id) { category in
-                                    CategoryChip(
-                                        category: category,
-                                        isSelected: selectedCategory?.id == category.id
-                                    )
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.15)) {
-                                            selectedCategory = category
+                            // Category chips — filter out Income category
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(viewModel.categories.filter { $0.name != "Income" }, id: \.id) { category in
+                                        CategoryChip(
+                                            category: category,
+                                            isSelected: selectedCategory?.id == category.id
+                                        )
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                selectedCategory = category
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    } else {
+                        // Show income category indicator
+                        HStack(spacing: 8) {
+                            Image(systemName: "banknote.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color(hex: "22C55E"))
+
+                            Text("Income")
+                                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color(hex: "22C55E"))
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color(hex: "22C55E").opacity(0.1))
+                        )
                     }
 
                     // Note
@@ -143,7 +187,9 @@ struct AddExpenseSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle(isEditing ? "Edit Expense" : "Add Expense")
+            .navigationTitle(isEditing
+                             ? (isIncome ? "Edit Income" : "Edit Expense")
+                             : (isIncome ? "Add Income" : "Add Expense"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -172,6 +218,7 @@ struct AddExpenseSheet: View {
             note = expense.note ?? ""
             selectedCategory = expense.category
             selectedDate = expense.date
+            isIncome = expense.isIncome
         } else if let date = prefilledDate {
             selectedDate = date
         }
@@ -188,14 +235,16 @@ struct AddExpenseSheet: View {
                 amount: amount,
                 date: selectedDate,
                 note: note.isEmpty ? nil : note,
-                category: selectedCategory
+                category: selectedCategory,
+                isIncome: isIncome
             )
         } else {
             viewModel.saveExpense(
                 amount: amount,
                 date: selectedDate,
                 note: note.isEmpty ? nil : note,
-                category: selectedCategory
+                category: selectedCategory,
+                isIncome: isIncome
             )
         }
         dismiss()

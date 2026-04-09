@@ -27,6 +27,7 @@ final class Category {
             Category(name: "Entertainment", icon: "gamecontroller.fill", colorHex: "F472B6"),
             Category(name: "Health", icon: "heart.fill", colorHex: "34D399"),
             Category(name: "Other", icon: "ellipsis.circle.fill", colorHex: "9CA3AF"),
+            Category(name: "Income", icon: "banknote.fill", colorHex: "22C55E"),
         ]
     }
 }

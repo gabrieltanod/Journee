@@ -2,6 +2,13 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+// MARK: - Daily Total
+
+struct DailyTotal {
+    var expense: Double = 0
+    var income: Double = 0
+}
+
 @Observable
 final class DashboardViewModel {
     private var modelContext: ModelContext
@@ -66,25 +73,39 @@ final class DashboardViewModel {
 
     private func seedCategoriesIfNeeded() {
         let descriptor = FetchDescriptor<Category>()
-        let count = (try? modelContext.fetchCount(descriptor)) ?? 0
-        if count == 0 {
+        let existing = (try? modelContext.fetch(descriptor)) ?? []
+
+        if existing.isEmpty {
+            // Fresh install — seed all defaults
             for cat in Category.defaults {
                 modelContext.insert(cat)
             }
             try? modelContext.save()
             loadCategories()
+        } else {
+            // Existing install — ensure "Income" category exists
+            let hasIncome = existing.contains { $0.name == "Income" }
+            if !hasIncome {
+                let incomeCat = Category(name: "Income", icon: "banknote.fill", colorHex: "22C55E")
+                modelContext.insert(incomeCat)
+                try? modelContext.save()
+                loadCategories()
+            }
         }
     }
 
     // MARK: - Computed Properties
 
     var remainingBudget: Double {
-        let totalSpent = expenses.reduce(0) { $0 + $1.amount }
-        return (currentBudget?.amount ?? 0) - totalSpent
+        (currentBudget?.amount ?? 0) - totalSpent
     }
 
     var totalSpent: Double {
-        expenses.reduce(0) { $0 + $1.amount }
+        expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
+    }
+
+    var totalIncome: Double {
+        expenses.filter { $0.isIncome }.reduce(0) { $0 + $1.amount }
     }
 
     var budgetAmount: Double {
@@ -100,13 +121,20 @@ final class DashboardViewModel {
         remainingBudget < 0
     }
 
-    /// Returns a dictionary of [dayOfMonth: totalSpent]
-    var dailyTotals: [Int: Double] {
+    /// Returns a dictionary of [dayOfMonth: DailyTotal] with separated income/expense
+    var dailyTotals: [Int: DailyTotal] {
         let calendar = Calendar.current
-        var totals: [Int: Double] = [:]
+        var totals: [Int: DailyTotal] = [:]
         for expense in expenses {
             let day = calendar.component(.day, from: expense.date)
-            totals[day, default: 0] += expense.amount
+            if totals[day] == nil {
+                totals[day] = DailyTotal()
+            }
+            if expense.isIncome {
+                totals[day]!.income += expense.amount
+            } else {
+                totals[day]!.expense += expense.amount
+            }
         }
         return totals
     }
@@ -158,18 +186,19 @@ final class DashboardViewModel {
 
     // MARK: - Expenses
 
-    func saveExpense(amount: Double, date: Date, note: String?, category: Category?) {
-        let expense = Expense(amount: amount, date: date, note: note, category: category)
+    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false) {
+        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome)
         modelContext.insert(expense)
         try? modelContext.save()
         loadData()
     }
 
-    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?) {
+    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false) {
         expense.amount = amount
         expense.date = date
         expense.note = note
         expense.category = category
+        expense.isIncome = isIncome
         try? modelContext.save()
         loadData()
     }
@@ -190,5 +219,17 @@ final class DashboardViewModel {
         modelContext.insert(category)
         try? modelContext.save()
         loadCategories()
+    }
+
+    /// Returns the "Income" category, creating it if needed
+    func incomeCategory() -> Category? {
+        if let existing = categories.first(where: { $0.name == "Income" }) {
+            return existing
+        }
+        let incomeCat = Category(name: "Income", icon: "banknote.fill", colorHex: "22C55E")
+        modelContext.insert(incomeCat)
+        try? modelContext.save()
+        loadCategories()
+        return categories.first(where: { $0.name == "Income" })
     }
 }
