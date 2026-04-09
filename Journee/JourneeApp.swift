@@ -15,6 +15,11 @@ struct JourneeApp: App {
                     .tabItem {
                         Label("Insights", systemImage: "chart.pie.fill")
                     }
+
+                HistoryView()
+                    .tabItem {
+                        Label("History", systemImage: "list.bullet.clipboard")
+                    }
             }
         }
         .modelContainer(for: [
