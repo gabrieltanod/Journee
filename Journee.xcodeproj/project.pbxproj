@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		40DF7FFC2F8D4FC1002D5179 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 40DF7FFB2F8D4FC1002D5179 /* WidgetKit.framework */; };
+		40DF7FFE2F8D4FC1002D5179 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 40DF7FFD2F8D4FC1002D5179 /* SwiftUI.framework */; };
+		40DF800F2F8D4FC2002D5179 /* JourneeWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 40DF7FF92F8D4FC1002D5179 /* JourneeWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		405AA6AC2F07B474007984E8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +27,47 @@
 			remoteGlobalIDString = 405AA69D2F07B473007984E8;
 			remoteInfo = Journee;
 		};
+		40DF800D2F8D4FC2002D5179 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 405AA6962F07B473007984E8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 40DF7FF82F8D4FC1002D5179;
+			remoteInfo = JourneeWidgetsExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		40DF80142F8D4FC2002D5179 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				40DF800F2F8D4FC2002D5179 /* JourneeWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		405AA69E2F07B473007984E8 /* Journee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Journee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		405AA6AB2F07B474007984E8 /* JourneeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JourneeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		405AA6B52F07B474007984E8 /* JourneeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JourneeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		40DF7FF92F8D4FC1002D5179 /* JourneeWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JourneeWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		40DF7FFB2F8D4FC1002D5179 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		40DF7FFD2F8D4FC1002D5179 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		40DF80102F8D4FC2002D5179 /* Exceptions for "JourneeWidgets" folder in "JourneeWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 40DF7FF82F8D4FC1002D5179 /* JourneeWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		405AA6A02F07B473007984E8 /* Journee */ = {
@@ -43,6 +83,14 @@
 		405AA6B82F07B474007984E8 /* JourneeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = JourneeUITests;
+			sourceTree = "<group>";
+		};
+		40DF7FFF2F8D4FC1002D5179 /* JourneeWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				40DF80102F8D4FC2002D5179 /* Exceptions for "JourneeWidgets" folder in "JourneeWidgetsExtension" target */,
+			);
+			path = JourneeWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +117,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		40DF7FF62F8D4FC1002D5179 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40DF7FFE2F8D4FC1002D5179 /* SwiftUI.framework in Frameworks */,
+				40DF7FFC2F8D4FC1002D5179 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,6 +135,8 @@
 				405AA6A02F07B473007984E8 /* Journee */,
 				405AA6AE2F07B474007984E8 /* JourneeTests */,
 				405AA6B82F07B474007984E8 /* JourneeUITests */,
+				40DF7FFF2F8D4FC1002D5179 /* JourneeWidgets */,
+				40DF7FFA2F8D4FC1002D5179 /* Frameworks */,
 				405AA69F2F07B473007984E8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,8 +147,18 @@
 				405AA69E2F07B473007984E8 /* Journee.app */,
 				405AA6AB2F07B474007984E8 /* JourneeTests.xctest */,
 				405AA6B52F07B474007984E8 /* JourneeUITests.xctest */,
+				40DF7FF92F8D4FC1002D5179 /* JourneeWidgetsExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		40DF7FFA2F8D4FC1002D5179 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				40DF7FFB2F8D4FC1002D5179 /* WidgetKit.framework */,
+				40DF7FFD2F8D4FC1002D5179 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +171,12 @@
 				405AA69A2F07B473007984E8 /* Sources */,
 				405AA69B2F07B473007984E8 /* Frameworks */,
 				405AA69C2F07B473007984E8 /* Resources */,
+				40DF80142F8D4FC2002D5179 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				40DF800E2F8D4FC2002D5179 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				405AA6A02F07B473007984E8 /* Journee */,
@@ -163,6 +234,28 @@
 			productReference = 405AA6B52F07B474007984E8 /* JourneeUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		40DF7FF82F8D4FC1002D5179 /* JourneeWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 40DF80112F8D4FC2002D5179 /* Build configuration list for PBXNativeTarget "JourneeWidgetsExtension" */;
+			buildPhases = (
+				40DF7FF52F8D4FC1002D5179 /* Sources */,
+				40DF7FF62F8D4FC1002D5179 /* Frameworks */,
+				40DF7FF72F8D4FC1002D5179 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				40DF7FFF2F8D4FC1002D5179 /* JourneeWidgets */,
+			);
+			name = JourneeWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = JourneeWidgetsExtension;
+			productReference = 40DF7FF92F8D4FC1002D5179 /* JourneeWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +277,9 @@
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 405AA69D2F07B473007984E8;
 					};
+					40DF7FF82F8D4FC1002D5179 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 				};
 			};
 			buildConfigurationList = 405AA6992F07B473007984E8 /* Build configuration list for PBXProject "Journee" */;
@@ -203,6 +299,7 @@
 				405AA69D2F07B473007984E8 /* Journee */,
 				405AA6AA2F07B474007984E8 /* JourneeTests */,
 				405AA6B42F07B474007984E8 /* JourneeUITests */,
+				40DF7FF82F8D4FC1002D5179 /* JourneeWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +320,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		405AA6B32F07B474007984E8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		40DF7FF72F8D4FC1002D5179 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +357,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		40DF7FF52F8D4FC1002D5179 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +376,11 @@
 			isa = PBXTargetDependency;
 			target = 405AA69D2F07B473007984E8 /* Journee */;
 			targetProxy = 405AA6B62F07B474007984E8 /* PBXContainerItemProxy */;
+		};
+		40DF800E2F8D4FC2002D5179 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 40DF7FF82F8D4FC1002D5179 /* JourneeWidgetsExtension */;
+			targetProxy = 40DF800D2F8D4FC2002D5179 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -532,6 +648,68 @@
 			};
 			name = Release;
 		};
+		40DF80122F8D4FC2002D5179 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VY8D8XH3TV;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JourneeWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JourneeWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = GabrielTanod.Journee.JourneeWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		40DF80132F8D4FC2002D5179 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VY8D8XH3TV;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JourneeWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JourneeWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = GabrielTanod.Journee.JourneeWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -567,6 +745,15 @@
 			buildConfigurations = (
 				405AA6C62F07B474007984E8 /* Debug */,
 				405AA6C72F07B474007984E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		40DF80112F8D4FC2002D5179 /* Build configuration list for PBXNativeTarget "JourneeWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				40DF80122F8D4FC2002D5179 /* Debug */,
+				40DF80132F8D4FC2002D5179 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

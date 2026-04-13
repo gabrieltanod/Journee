@@ -5,6 +5,9 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("payday") private var payday: Int = 1
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
+    @AppStorage("notificationHour") private var notificationHour: Int = 20
+    @AppStorage("notificationMinute") private var notificationMinute: Int = 0
     @State private var viewModel: SettingsViewModel?
     @State private var showFileImporter: Bool = false
 
@@ -93,6 +96,86 @@ struct SettingsView: View {
                     .textCase(nil)
             } footer: {
                 Text("Your budget cycle runs from the payday of one month to the day before the next payday. Set to 1 for standard monthly cycles.")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+
+            // MARK: - Daily Reminder Section
+            Section {
+                Toggle(isOn: $notificationsEnabled) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color(hex: "FF6B6B"))
+                            )
+
+                        Text("Daily Reminder")
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                    }
+                }
+                .onChange(of: notificationsEnabled) { _, enabled in
+                    if enabled {
+                        NotificationManager.shared.requestAuthorization { granted in
+                            if granted {
+                                NotificationManager.shared.scheduleDailyReminder(
+                                    hour: notificationHour,
+                                    minute: notificationMinute
+                                )
+                            } else {
+                                notificationsEnabled = false
+                            }
+                        }
+                    } else {
+                        NotificationManager.shared.cancelReminder()
+                    }
+                }
+
+                if notificationsEnabled {
+                    DatePicker(
+                        "Remind at",
+                        selection: Binding(
+                            get: {
+                                var comps = DateComponents()
+                                comps.hour = notificationHour
+                                comps.minute = notificationMinute
+                                return Calendar.current.date(from: comps) ?? Date()
+                            },
+                            set: { newDate in
+                                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                                notificationHour = comps.hour ?? 20
+                                notificationMinute = comps.minute ?? 0
+                            }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
+                    .font(.system(.body, design: .rounded))
+                    .onChange(of: notificationHour) { _, _ in
+                        NotificationManager.shared.scheduleDailyReminder(
+                            hour: notificationHour,
+                            minute: notificationMinute
+                        )
+                    }
+                    .onChange(of: notificationMinute) { _, _ in
+                        NotificationManager.shared.scheduleDailyReminder(
+                            hour: notificationHour,
+                            minute: notificationMinute
+                        )
+                    }
+                }
+            } header: {
+                Text("Notifications")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+            } footer: {
+                Text(notificationsEnabled
+                    ? "You'll get a daily reminder to log your expenses."
+                    : "Enable to get a daily nudge to track your spending."
+                )
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.tertiary)
             }

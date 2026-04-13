@@ -33,6 +33,7 @@ struct DashboardContent: View {
 
     @State private var selectedDate: Date?
     @State private var showAddExpense: Bool = false
+    @State private var appState = AppState.shared
 
     var body: some View {
         NavigationStack {
@@ -97,6 +98,12 @@ struct DashboardContent: View {
         .sheet(isPresented: $showAddExpense) {
             AddExpenseSheet(viewModel: viewModel)
                 .presentationDetents([.large])
+        }
+        .onChange(of: appState.shouldShowQuickAdd) { _, shouldShow in
+            if shouldShow {
+                showAddExpense = true
+                appState.shouldShowQuickAdd = false
+            }
         }
     }
 
