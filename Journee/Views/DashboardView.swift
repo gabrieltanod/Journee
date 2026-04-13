@@ -32,15 +32,34 @@ struct DashboardContent: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    budgetCard
-                    calendarSection
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        budgetCard
+                        calendarSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 80)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .background(Color(.systemBackground))
+
+                // Floating Action Button
+                Button {
+                    showAddExpense = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(
+                            Circle()
+                                .fill(Color.primary)
+                                .shadow(color: .primary.opacity(0.25), radius: 8, x: 0, y: 4)
+                        )
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 16)
             }
-            .background(Color(.systemBackground))
             .navigationTitle("Journee")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -51,15 +70,6 @@ struct DashboardContent: View {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.primary.opacity(0.6))
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showAddExpense = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
                     }
                 }
             }
