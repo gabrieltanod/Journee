@@ -7,7 +7,7 @@ struct CategoryDetailView: View {
     let categoryName: String
     let categoryIcon: String
     let categoryColorHex: String
-    let selectedMonth: Date
+    let cycle: PaydayCycle
 
     @State private var expenses: [Expense] = []
     @State private var expenseToEdit: Expense?
@@ -43,14 +43,8 @@ struct CategoryDetailView: View {
     // MARK: - Data Loading
 
     private func loadExpenses() {
-        let calendar = Calendar.current
-        let comps = calendar.dateComponents([.year, .month], from: selectedMonth)
-        guard let startOfMonth = calendar.date(from: comps),
-              let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
-        else { return }
-
-        let start = calendar.startOfDay(for: startOfMonth)
-        let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endOfMonth) ?? endOfMonth
+        let start = cycle.fetchStartDate
+        let end = cycle.fetchEndDate
 
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.date >= start && $0.date <= end },

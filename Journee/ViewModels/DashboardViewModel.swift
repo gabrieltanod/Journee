@@ -12,18 +12,29 @@ struct DailyTotal {
 @Observable
 final class DashboardViewModel {
     private var modelContext: ModelContext
+    private var payday: Int
 
     var currentBudget: MonthlyBudget?
     var expenses: [Expense] = []
     var categories: [Category] = []
-    var selectedMonth: Date = Date()
+    var currentCycle: PaydayCycle
     var showBudgetPrompt: Bool = false
     var showAddExpense: Bool = false
 
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, payday: Int = 1) {
         self.modelContext = modelContext
+        self.payday = payday
+        self.currentCycle = PaydayCycle.cycle(containing: Date(), payday: payday)
         loadData()
         seedCategoriesIfNeeded()
+    }
+
+    // MARK: - Payday Update
+
+    func updatePayday(_ newPayday: Int) {
+        payday = newPayday
+        currentCycle = PaydayCycle.cycle(containing: currentCycle.startDate, payday: newPayday)
+        loadData()
     }
 
     // MARK: - Data Loading
@@ -35,9 +46,8 @@ final class DashboardViewModel {
     }
 
     private func loadBudget() {
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: selectedMonth)
-        let year = calendar.component(.year, from: selectedMonth)
+        let month = currentCycle.startMonth
+        let year = currentCycle.startYear
 
         let descriptor = FetchDescriptor<MonthlyBudget>(
             predicate: #Predicate { $0.month == month && $0.year == year }
@@ -46,14 +56,8 @@ final class DashboardViewModel {
     }
 
     private func loadExpenses() {
-        let calendar = Calendar.current
-        let comps = calendar.dateComponents([.year, .month], from: selectedMonth)
-        guard let startOfMonth = calendar.date(from: comps),
-              let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
-        else { return }
-
-        let start = calendar.startOfDay(for: startOfMonth)
-        let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endOfMonth) ?? endOfMonth
+        let start = currentCycle.fetchStartDate
+        let end = currentCycle.fetchEndDate
 
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.date >= start && $0.date <= end },
@@ -76,14 +80,12 @@ final class DashboardViewModel {
         let existing = (try? modelContext.fetch(descriptor)) ?? []
 
         if existing.isEmpty {
-            // Fresh install — seed all defaults
             for cat in Category.defaults {
                 modelContext.insert(cat)
             }
             try? modelContext.save()
             loadCategories()
         } else {
-            // Existing install — ensure "Income" category exists
             let hasIncome = existing.contains { $0.name == "Income" }
             if !hasIncome {
                 let incomeCat = Category(name: "Income", icon: "banknote.fill", colorHex: "22C55E")
@@ -121,57 +123,49 @@ final class DashboardViewModel {
         remainingBudget < 0
     }
 
-    /// Returns a dictionary of [dayOfMonth: DailyTotal] with separated income/expense
-    var dailyTotals: [Int: DailyTotal] {
+    /// Returns a dictionary of [Date (start-of-day): DailyTotal] with separated income/expense
+    var dailyTotals: [Date: DailyTotal] {
         let calendar = Calendar.current
-        var totals: [Int: DailyTotal] = [:]
+        var totals: [Date: DailyTotal] = [:]
         for expense in expenses {
-            let day = calendar.component(.day, from: expense.date)
-            if totals[day] == nil {
-                totals[day] = DailyTotal()
+            let dayKey = calendar.startOfDay(for: expense.date)
+            if totals[dayKey] == nil {
+                totals[dayKey] = DailyTotal()
             }
             if expense.isIncome {
-                totals[day]!.income += expense.amount
+                totals[dayKey]!.income += expense.amount
             } else {
-                totals[day]!.expense += expense.amount
+                totals[dayKey]!.expense += expense.amount
             }
         }
         return totals
     }
 
-    var monthYearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: selectedMonth)
+    var cycleLabel: String {
+        currentCycle.label
     }
 
-    var isCurrentMonth: Bool {
-        let calendar = Calendar.current
-        return calendar.isDate(selectedMonth, equalTo: Date(), toGranularity: .month)
+    var isCurrentCycle: Bool {
+        currentCycle.isCurrentCycle
     }
 
-    // MARK: - Month Navigation
+    // MARK: - Cycle Navigation
 
-    func nextMonth() {
-        if let newDate = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) {
-            selectedMonth = newDate
-            loadData()
-        }
+    func nextCycle() {
+        currentCycle = currentCycle.next(payday: payday)
+        loadData()
     }
 
-    func previousMonth() {
-        if let newDate = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) {
-            selectedMonth = newDate
-            loadData()
-        }
+    func previousCycle() {
+        currentCycle = currentCycle.previous(payday: payday)
+        loadData()
     }
 
     // MARK: - Budget
 
     func saveBudget(amount: Double) {
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: selectedMonth)
-        let year = calendar.component(.year, from: selectedMonth)
+        let month = currentCycle.startMonth
+        let year = currentCycle.startYear
 
         if let existing = currentBudget {
             existing.amount = amount

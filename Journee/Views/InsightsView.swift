@@ -4,6 +4,7 @@ import Charts
 
 struct InsightsView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("payday") private var payday: Int = 1
     @State private var viewModel: InsightsViewModel?
 
     var body: some View {
@@ -17,8 +18,11 @@ struct InsightsView: View {
         }
         .onAppear {
             if viewModel == nil {
-                viewModel = InsightsViewModel(modelContext: modelContext)
+                viewModel = InsightsViewModel(modelContext: modelContext, payday: payday)
             }
+        }
+        .onChange(of: payday) { _, newValue in
+            viewModel?.updatePayday(newValue)
         }
     }
 }
@@ -32,7 +36,7 @@ struct InsightsContent: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    monthNavigator
+                    cycleNavigator
                     donutChartCard
                     categoryListCard
 
@@ -50,11 +54,11 @@ struct InsightsContent: View {
         }
     }
 
-    // MARK: - Month Navigator
+    // MARK: - Cycle Navigator
 
-    private var monthNavigator: some View {
+    private var cycleNavigator: some View {
         HStack {
-            Button { viewModel.previousMonth() } label: {
+            Button { viewModel.previousCycle() } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(.body, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.5))
@@ -62,21 +66,21 @@ struct InsightsContent: View {
 
             Spacer()
 
-            Text(viewModel.monthYearString)
+            Text(viewModel.cycleLabel)
                 .font(.system(.body, design: .rounded, weight: .semibold))
 
-            if viewModel.isCurrentMonth {
+            if viewModel.isCurrentCycle {
                 Text("NOW")
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.primary))
+                    .background(Capsule().fill(Color.black))
             }
 
             Spacer()
 
-            Button { viewModel.nextMonth() } label: {
+            Button { viewModel.nextCycle() } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(.body, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.5))
@@ -99,7 +103,7 @@ struct InsightsContent: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.primary.opacity(0.15))
 
-                    Text("No expenses this month")
+                    Text("No expenses this cycle")
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -196,16 +200,14 @@ struct InsightsContent: View {
                         categoryName: slice.name,
                         categoryIcon: slice.icon,
                         categoryColorHex: slice.colorHex,
-                        selectedMonth: viewModel.selectedMonth
+                        cycle: viewModel.currentCycle
                     )
                 } label: {
                     HStack(spacing: 12) {
-                        // Color dot
                         Circle()
                             .fill(slice.color)
                             .frame(width: 10, height: 10)
 
-                        // Icon + name
                         Image(systemName: slice.icon)
                             .font(.system(size: 14))
                             .foregroundStyle(slice.color)
@@ -250,7 +252,7 @@ struct InsightsContent: View {
                 categoryName: "Income",
                 categoryIcon: "banknote.fill",
                 categoryColorHex: "22C55E",
-                selectedMonth: viewModel.selectedMonth
+                cycle: viewModel.currentCycle
             )
         } label: {
             HStack(spacing: 12) {
@@ -268,7 +270,7 @@ struct InsightsContent: View {
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundStyle(.primary)
 
-                    Text("This month")
+                    Text("This cycle")
                         .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }

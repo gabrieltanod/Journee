@@ -1,48 +1,52 @@
 import SwiftUI
 
 struct CalendarGridView: View {
-    let selectedMonth: Date
-    let dailyTotals: [Int: DailyTotal]
-    var onDayTapped: ((Int) -> Void)?
+    let cycle: PaydayCycle
+    let dailyTotals: [Date: DailyTotal]
+    var onDayTapped: ((Date) -> Void)?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
     private let weekdaySymbols = Calendar.current.veryShortWeekdaySymbols
 
     private var calendar: Calendar { Calendar.current }
 
-    private var daysInMonth: Int {
-        calendar.range(of: .day, in: .month, for: selectedMonth)?.count ?? 30
+    /// Weekday index (0 = Sunday) of the cycle's start date
+    private var startWeekdayOffset: Int {
+        calendar.component(.weekday, from: cycle.startDate) - 1
     }
 
-    /// Weekday index (0 = Sunday) of the 1st day of the month
-    private var firstWeekday: Int {
-        let comps = calendar.dateComponents([.year, .month], from: selectedMonth)
-        guard let firstDay = calendar.date(from: comps) else { return 0 }
-        return calendar.component(.weekday, from: firstDay) - 1
+    /// Today as start-of-day for comparison
+    private var todayDate: Date {
+        calendar.startOfDay(for: Date())
     }
 
-    private var todayDay: Int? {
-        guard calendar.isDate(selectedMonth, equalTo: Date(), toGranularity: .month) else { return nil }
-        return calendar.component(.day, from: Date())
-    }
+    /// Build cell array: leading empty placeholders + actual dates
+    private var calendarCells: [CycleCalendarCell] {
+        var cells: [CycleCalendarCell] = []
 
-    /// A unified array of cell models: nil = empty spacer, Int = day number
-    private var calendarCells: [CalendarCell] {
-        var cells: [CalendarCell] = []
-        // Leading empty cells
-        for i in 0..<firstWeekday {
-            cells.append(CalendarCell(id: -i - 1, day: nil))
+        // Leading empty cells to align start date to correct weekday column
+        for i in 0..<startWeekdayOffset {
+            cells.append(CycleCalendarCell(id: "empty-\(i)", date: nil))
         }
-        // Day cells
-        for day in 1...daysInMonth {
-            cells.append(CalendarCell(id: day, day: day))
+
+        // Actual date cells
+        let dates = cycle.allDates
+        let dateKeyFormatter = DateFormatter()
+        dateKeyFormatter.dateFormat = "yyyy-MM-dd"
+
+        for date in dates {
+            cells.append(CycleCalendarCell(
+                id: dateKeyFormatter.string(from: date),
+                date: date
+            ))
         }
+
         return cells
     }
 
     var body: some View {
         VStack(spacing: 8) {
-            // Weekday headers — use Array.indices to avoid duplicate-ID issue
+            // Weekday headers
             LazyVGrid(columns: columns, spacing: 2) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
@@ -52,17 +56,17 @@ struct CalendarGridView: View {
                 }
             }
 
-            // Day cells — single ForEach with unique IDs
+            // Day cells
             LazyVGrid(columns: columns, spacing: 2) {
                 ForEach(calendarCells) { cell in
-                    if let day = cell.day {
+                    if let date = cell.date {
                         Button {
-                            onDayTapped?(day)
+                            onDayTapped?(date)
                         } label: {
-                            DayCellView(
-                                day: day,
-                                dailyTotal: dailyTotals[day],
-                                isToday: day == todayDay
+                            CycleDayCellView(
+                                date: date,
+                                dailyTotal: dailyTotals[calendar.startOfDay(for: date)],
+                                isToday: calendar.startOfDay(for: date) == todayDate
                             )
                         }
                         .buttonStyle(.plain)
@@ -76,27 +80,55 @@ struct CalendarGridView: View {
     }
 }
 
-private struct CalendarCell: Identifiable {
-    let id: Int
-    let day: Int?
+// MARK: - Cell Model
+
+private struct CycleCalendarCell: Identifiable {
+    let id: String
+    let date: Date?
 }
 
 // MARK: - Day Cell
 
-struct DayCellView: View {
-    let day: Int
+struct CycleDayCellView: View {
+    let date: Date
     let dailyTotal: DailyTotal?
     let isToday: Bool
 
+    private var dayNumber: Int {
+        Calendar.current.component(.day, from: date)
+    }
+
+    /// Show month abbreviation on the 1st day of any month within the cycle
+    private var monthLabel: String? {
+        if dayNumber == 1 {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM"
+            return formatter.string(from: date)
+        }
+        return nil
+    }
+
     var body: some View {
         VStack(spacing: 1) {
-            Text("\(day)")
-                .font(.system(.caption, design: .rounded, weight: isToday ? .bold : .regular))
-                .foregroundStyle(isToday ? .white : .primary)
+            // Day number + optional month label
+            if let month = monthLabel {
+                VStack(spacing: 0) {
+                    Text("\(dayNumber)")
+                        .font(.system(size: 11, weight: isToday ? .bold : .regular, design: .rounded))
+                        .foregroundStyle(isToday ? .white : .primary)
+
+                    Text(month)
+                        .font(.system(size: 7, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isToday ? .white.opacity(0.7) : .secondary)
+                }
+            } else {
+                Text("\(dayNumber)")
+                    .font(.system(.caption, design: .rounded, weight: isToday ? .bold : .regular))
+                    .foregroundStyle(isToday ? .white : .primary)
+            }
 
             if let total = dailyTotal {
                 if total.income > 0 && total.expense > 0 {
-                    // Both: green income on top, orange expense on bottom
                     VStack(spacing: 0) {
                         Text(formattedAmount(total.income))
                             .font(.system(size: 7, weight: .medium, design: .rounded))
@@ -111,14 +143,12 @@ struct DayCellView: View {
                             .minimumScaleFactor(0.5)
                     }
                 } else if total.income > 0 {
-                    // Income only — green
                     Text(formattedAmount(total.income))
                         .font(.system(size: 8, weight: .medium, design: .rounded))
                         .foregroundStyle(isToday ? .white.opacity(0.8) : Color(hex: "22C55E"))
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 } else if total.expense > 0 {
-                    // Expense only — orange (original behavior)
                     Text(formattedAmount(total.expense))
                         .font(.system(size: 8, weight: .medium, design: .rounded))
                         .foregroundStyle(isToday ? .white.opacity(0.8) : .orange)
@@ -131,7 +161,7 @@ struct DayCellView: View {
         .frame(height: 56)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isToday ? Color.primary : Color(.tertiarySystemFill))
+                .fill(isToday ? Color.black : Color(.tertiarySystemFill))
         )
     }
 

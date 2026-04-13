@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("payday") private var payday: Int = 1
     @State private var viewModel: SettingsViewModel?
     @State private var showFileImporter: Bool = false
 
@@ -26,6 +27,76 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsContent(viewModel: SettingsViewModel) -> some View {
         List {
+            // MARK: - Budget Cycle Section
+            Section {
+                HStack {
+                    Text("Payday")
+                        .font(.system(.body, design: .rounded, weight: .medium))
+
+                    Spacer()
+
+                    // Minus button
+                    Button {
+                        if payday > 1 { payday -= 1 }
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
+                            .background(Circle().fill(Color(.tertiarySystemFill)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(payday <= 1)
+
+                    // Editable text field
+                    TextField("1", text: Binding(
+                        get: { "\(payday)" },
+                        set: { newValue in
+                            if let val = Int(newValue) {
+                                payday = max(1, min(28, val))
+                            }
+                        }
+                    ))
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.numberPad)
+                    .frame(width: 44)
+
+                    // Plus button
+                    Button {
+                        if payday < 28 { payday += 1 }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
+                            .background(Circle().fill(Color(.tertiarySystemFill)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(payday >= 28)
+                }
+
+                // Cycle preview
+                HStack {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+
+                    Text(cyclePreviewText)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Budget Cycle")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+            } footer: {
+                Text("Your budget cycle runs from the payday of one month to the day before the next payday. Set to 1 for standard monthly cycles.")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+
             // MARK: - Backup Section
             Section {
                 // Export
@@ -160,6 +231,19 @@ struct SettingsView: View {
         } message: {
             Text(viewModel.errorMessage ?? "An unknown error occurred.")
         }
+    }
+
+    // MARK: - Payday Helpers
+
+    private func ordinalDay(_ day: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .ordinal
+        return formatter.string(from: NSNumber(value: day)) ?? "\(day)"
+    }
+
+    private var cyclePreviewText: String {
+        let cycle = PaydayCycle.cycle(containing: Date(), payday: payday)
+        return "Current cycle: \(cycle.label)"
     }
 }
 

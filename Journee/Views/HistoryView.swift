@@ -3,6 +3,7 @@ import SwiftData
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("payday") private var payday: Int = 1
     @State private var viewModel: HistoryViewModel?
 
     var body: some View {
@@ -16,8 +17,11 @@ struct HistoryView: View {
         }
         .onAppear {
             if viewModel == nil {
-                viewModel = HistoryViewModel(modelContext: modelContext)
+                viewModel = HistoryViewModel(modelContext: modelContext, payday: payday)
             }
+        }
+        .onChange(of: payday) { _, newValue in
+            viewModel?.updatePayday(newValue)
         }
     }
 }
@@ -81,9 +85,9 @@ struct HistoryContent: View {
 
     private var groupedList: some View {
         List {
-            ForEach(viewModel.groupedByMonth) { monthGroup in
+            ForEach(viewModel.groupedByCycle) { cycleGroup in
                 Section {
-                    ForEach(monthGroup.dayGroups) { dayGroup in
+                    ForEach(cycleGroup.dayGroups) { dayGroup in
                         // Day sub-header
                         Text(dayGroup.title)
                             .font(.system(.caption, design: .rounded, weight: .semibold))
@@ -108,7 +112,7 @@ struct HistoryContent: View {
                         }
                     }
                 } header: {
-                    Text(monthGroup.title)
+                    Text(cycleGroup.title)
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundStyle(.primary)
                         .textCase(nil)

@@ -69,7 +69,7 @@ struct DailyDetailView: View {
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.primary)
+//                        .fill(Color(hex: "1C1C1E"))
                 )
             }
 

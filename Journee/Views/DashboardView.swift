@@ -3,6 +3,7 @@ import SwiftData
 
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("payday") private var payday: Int = 1
     @State private var viewModel: DashboardViewModel?
 
     var body: some View {
@@ -16,8 +17,11 @@ struct DashboardView: View {
         }
         .onAppear {
             if viewModel == nil {
-                viewModel = DashboardViewModel(modelContext: modelContext)
+                viewModel = DashboardViewModel(modelContext: modelContext, payday: payday)
             }
+        }
+        .onChange(of: payday) { _, newValue in
+            viewModel?.updatePayday(newValue)
         }
     }
 }
@@ -27,7 +31,7 @@ struct DashboardView: View {
 struct DashboardContent: View {
     @Bindable var viewModel: DashboardViewModel
 
-    @State private var selectedDay: Int?
+    @State private var selectedDate: Date?
     @State private var showAddExpense: Bool = false
 
     var body: some View {
@@ -53,8 +57,8 @@ struct DashboardContent: View {
                         .frame(width: 56, height: 56)
                         .background(
                             Circle()
-                                .fill(Color.primary)
-                                .shadow(color: .primary.opacity(0.25), radius: 8, x: 0, y: 4)
+                                .fill(Color(hex: "1C1C1E"))
+                                .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
                         )
                 }
                 .padding(.trailing, 20)
@@ -73,10 +77,10 @@ struct DashboardContent: View {
                     }
                 }
             }
-            .navigationDestination(item: $selectedDay) { day in
+            .navigationDestination(item: $selectedDate) { date in
                 DailyDetailView(
                     viewModel: viewModel,
-                    date: dateForDay(day)
+                    date: date
                 )
             }
         }
@@ -152,7 +156,7 @@ struct DashboardContent: View {
             } else {
                 // No budget set — show spent only + option to set budget
                 VStack(spacing: 4) {
-                    Text("Spent This Month")
+                    Text("Spent This Cycle")
                         .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
 
@@ -166,7 +170,7 @@ struct DashboardContent: View {
                 Button {
                     viewModel.showBudgetPrompt = true
                 } label: {
-                    Label("Set Monthly Budget", systemImage: "plus.circle")
+                    Label("Set Budget", systemImage: "plus.circle")
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundStyle(.primary.opacity(0.6))
                         .padding(.vertical, 10)
@@ -240,16 +244,16 @@ struct DashboardContent: View {
     private func progressColor(_ pct: Double) -> Color {
         if pct >= 0.9 { return .red }
         if pct >= 0.7 { return .orange }
-        return Color.primary.opacity(0.6)
+        return Color.secondary
     }
 
     // MARK: - Calendar Section
 
     private var calendarSection: some View {
         VStack(spacing: 16) {
-            // Month nav
+            // Cycle nav
             HStack {
-                Button { viewModel.previousMonth() } label: {
+                Button { viewModel.previousCycle() } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(.body, weight: .medium))
                         .foregroundStyle(.primary.opacity(0.5))
@@ -257,21 +261,21 @@ struct DashboardContent: View {
 
                 Spacer()
 
-                Text(viewModel.monthYearString)
+                Text(viewModel.cycleLabel)
                     .font(.system(.body, design: .rounded, weight: .semibold))
 
-                if viewModel.isCurrentMonth {
+                if viewModel.isCurrentCycle {
                     Text("NOW")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.primary))
+                        .background(Capsule().fill(Color.black))
                 }
 
                 Spacer()
 
-                Button { viewModel.nextMonth() } label: {
+                Button { viewModel.nextCycle() } label: {
                     Image(systemName: "chevron.right")
                         .font(.system(.body, weight: .medium))
                         .foregroundStyle(.primary.opacity(0.5))
@@ -279,10 +283,10 @@ struct DashboardContent: View {
             }
 
             CalendarGridView(
-                selectedMonth: viewModel.selectedMonth,
+                cycle: viewModel.currentCycle,
                 dailyTotals: viewModel.dailyTotals,
-                onDayTapped: { day in
-                    selectedDay = day
+                onDayTapped: { date in
+                    selectedDate = date
                 }
             )
         }
@@ -294,13 +298,6 @@ struct DashboardContent: View {
     }
 
     // MARK: - Helpers
-
-    private func dateForDay(_ day: Int) -> Date {
-        let calendar = Calendar.current
-        var comps = calendar.dateComponents([.year, .month], from: viewModel.selectedMonth)
-        comps.day = day
-        return calendar.date(from: comps) ?? viewModel.selectedMonth
-    }
 
     private func formattedCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()

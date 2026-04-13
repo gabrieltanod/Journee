@@ -5,28 +5,33 @@ import SwiftUI
 @Observable
 final class InsightsViewModel {
     private var modelContext: ModelContext
+    private var payday: Int
 
-    var selectedMonth: Date = Date()
+    var currentCycle: PaydayCycle
     var categoryBreakdown: [CategorySlice] = []
     var selectedSlice: CategorySlice?
     var totalIncome: Double = 0
 
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, payday: Int = 1) {
         self.modelContext = modelContext
+        self.payday = payday
+        self.currentCycle = PaydayCycle.cycle(containing: Date(), payday: payday)
+        loadData()
+    }
+
+    // MARK: - Payday Update
+
+    func updatePayday(_ newPayday: Int) {
+        payday = newPayday
+        currentCycle = PaydayCycle.cycle(containing: currentCycle.startDate, payday: newPayday)
         loadData()
     }
 
     // MARK: - Data
 
     func loadData() {
-        let calendar = Calendar.current
-        let comps = calendar.dateComponents([.year, .month], from: selectedMonth)
-        guard let startOfMonth = calendar.date(from: comps),
-              let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)
-        else { return }
-
-        let start = calendar.startOfDay(for: startOfMonth)
-        let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endOfMonth) ?? endOfMonth
+        let start = currentCycle.fetchStartDate
+        let end = currentCycle.fetchEndDate
 
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { $0.date >= start && $0.date <= end }
@@ -78,30 +83,24 @@ final class InsightsViewModel {
         categoryBreakdown.reduce(0) { $0 + $1.amount }
     }
 
-    var monthYearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: selectedMonth)
+    var cycleLabel: String {
+        currentCycle.label
     }
 
-    var isCurrentMonth: Bool {
-        Calendar.current.isDate(selectedMonth, equalTo: Date(), toGranularity: .month)
+    var isCurrentCycle: Bool {
+        currentCycle.isCurrentCycle
     }
 
     // MARK: - Navigation
 
-    func nextMonth() {
-        if let newDate = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) {
-            selectedMonth = newDate
-            loadData()
-        }
+    func nextCycle() {
+        currentCycle = currentCycle.next(payday: payday)
+        loadData()
     }
 
-    func previousMonth() {
-        if let newDate = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) {
-            selectedMonth = newDate
-            loadData()
-        }
+    func previousCycle() {
+        currentCycle = currentCycle.previous(payday: payday)
+        loadData()
     }
 }
 
