@@ -44,6 +44,16 @@ struct DashboardContent: View {
             .navigationTitle("Journee")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.primary.opacity(0.6))
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showAddExpense = true
