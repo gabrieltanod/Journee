@@ -307,10 +307,6 @@ struct DashboardContent: View {
     // MARK: - Helpers
 
     private func formattedCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencySymbol = "Rp"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "Rp0"
+        return value.formattedRupiah
     }
 }
