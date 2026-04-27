@@ -25,98 +25,69 @@ struct AddHeadCategorySheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                // Preview
-                HStack(spacing: 12) {
-                    Image(systemName: selectedIcon)
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(hex: selectedColor))
-                        .frame(width: 44, height: 44)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(hex: selectedColor).opacity(0.12))
-                        )
+            Form {
+                Section {
+                    HStack(spacing: 16) {
+                        Image(systemName: selectedIcon)
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color(hex: selectedColor))
+                            .frame(width: 52, height: 52)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(hex: selectedColor).opacity(0.12))
+                            )
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(name.isEmpty ? "Head Category" : name)
-                            .font(.system(.body, design: .rounded, weight: .semibold))
-                            .foregroundStyle(name.isEmpty ? .secondary : .primary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(name.isEmpty ? "New Category" : name)
+                                .font(.system(.body, design: .rounded, weight: .semibold))
+                                .foregroundStyle(name.isEmpty ? .secondary : .primary)
 
-                        Text("Parent group")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.secondary)
+                            Text("Head Category")
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
                     }
-
-                    Spacer()
+                    .padding(.vertical, 4)
                 }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(.secondarySystemBackground))
-                )
 
-                // Name
-                TextField("Category name", text: $name)
-                    .font(.system(.body, design: .rounded))
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(.tertiarySystemFill))
-                    )
+                Section {
+                    TextField("Name", text: $name)
+                        .font(.system(.body, design: .rounded))
+                }
 
-                // Icon picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Icon")
-                        .font(.system(.caption, design: .rounded, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                Section("Icon") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 44))], spacing: 12) {
                         ForEach(iconOptions, id: \.self) { icon in
                             Image(systemName: icon)
-                                .font(.system(size: 16))
-                                .frame(width: 40, height: 40)
+                                .font(.system(size: 20))
+                                .foregroundStyle(selectedIcon == icon ? Color(hex: selectedColor) : .secondary)
+                                .frame(width: 44, height: 44)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(selectedIcon == icon
-                                              ? Color(hex: selectedColor).opacity(0.15)
-                                              : Color(.tertiarySystemFill))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .strokeBorder(selectedIcon == icon
-                                                      ? Color(hex: selectedColor).opacity(0.4)
-                                                      : Color.clear, lineWidth: 1.5)
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(selectedIcon == icon ? Color(hex: selectedColor).opacity(0.12) : Color.clear)
                                 )
                                 .onTapGesture { selectedIcon = icon }
                         }
                     }
+                    .padding(.vertical, 8)
                 }
 
-                // Color picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Color")
-                        .font(.system(.caption, design: .rounded, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    HStack(spacing: 10) {
+                Section("Color") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 40))], spacing: 12) {
                         ForEach(colorOptions, id: \.self) { hex in
                             Circle()
                                 .fill(Color(hex: hex))
-                                .frame(width: 30, height: 30)
+                                .frame(width: 40, height: 40)
                                 .overlay(
                                     Circle()
-                                        .strokeBorder(Color.primary,
-                                                      lineWidth: selectedColor == hex ? 2.5 : 0)
-                                        .padding(selectedColor == hex ? -3 : 0)
+                                        .strokeBorder(Color.primary.opacity(selectedColor == hex ? 0.3 : 0), lineWidth: 3)
                                 )
                                 .onTapGesture { selectedColor = hex }
                         }
                     }
+                    .padding(.vertical, 8)
                 }
-
-                Spacer()
             }
-            .padding(20)
             .navigationTitle("New Head Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
