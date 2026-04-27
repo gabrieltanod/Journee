@@ -264,4 +264,32 @@ final class DashboardViewModel {
         loadCategories()
         loadHeadCategories()
     }
+
+    func updateCategory(_ category: Category, name: String, icon: String, headCategory: HeadCategory?) {
+        category.name = name
+        category.icon = icon
+        category.headCategory = headCategory
+        if let head = headCategory {
+            category.colorHex = head.colorHex
+        }
+        try? modelContext.save()
+        loadCategories()
+        loadHeadCategories()
+    }
+
+    func updateHeadCategory(_ headCategory: HeadCategory, name: String, icon: String, colorHex: String) {
+        headCategory.name = name
+        headCategory.icon = icon
+        headCategory.colorHex = colorHex
+        
+        // Update sub-category colors
+        let children = categories.filter { $0.headCategory?.id == headCategory.id }
+        for child in children {
+            child.colorHex = colorHex
+        }
+        
+        try? modelContext.save()
+        loadCategories()
+        loadHeadCategories()
+    }
 }
