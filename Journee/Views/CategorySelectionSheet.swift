@@ -8,6 +8,7 @@ struct CategorySelectionSheet: View {
 
     @State private var expandedHeadCategories: Set<UUID> = []
     @State private var showAddHeadCategory: Bool = false
+    @State private var showAddCategory: Bool = false
     @State private var targetHeadCategory: HeadCategory? = nil
     @State private var categoryToEdit: Category? = nil
     @State private var headCategoryToEdit: HeadCategory? = nil
@@ -186,6 +187,12 @@ struct CategorySelectionSheet: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button {
+                            showAddCategory = true
+                        } label: {
+                            Label("New Category", systemImage: "plus.circle")
+                        }
+
+                        Button {
                             showAddHeadCategory = true
                         } label: {
                             Label("New Head Category", systemImage: "folder.badge.plus")
@@ -199,6 +206,10 @@ struct CategorySelectionSheet: View {
             }
             .sheet(isPresented: $showAddHeadCategory) {
                 AddHeadCategorySheet(viewModel: viewModel)
+                    .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showAddCategory) {
+                AddCategorySheet(viewModel: viewModel)
                     .presentationDetents([.large])
             }
             .sheet(item: $targetHeadCategory) { head in
