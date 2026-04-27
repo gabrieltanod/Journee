@@ -14,6 +14,7 @@ struct JourneeApp: App {
             Expense.self,
             Category.self,
             MonthlyBudget.self,
+            HeadCategory.self,
         ])
     }
 }

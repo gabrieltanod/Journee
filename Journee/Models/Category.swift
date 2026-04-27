@@ -8,6 +8,8 @@ final class Category {
     var icon: String
     var colorHex: String
 
+    var headCategory: HeadCategory? = nil
+
     @Relationship(deleteRule: .nullify, inverse: \Expense.category)
     var expenses: [Expense] = []
 
