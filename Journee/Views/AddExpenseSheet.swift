@@ -13,26 +13,8 @@ struct AddExpenseSheet: View {
     @State private var note: String = ""
     @State private var selectedCategory: Category?
     @State private var selectedDate: Date = Date()
-    @State private var showNewCategory: Bool = false
     @State private var isIncome: Bool = false
-    @State private var expandedHeadCategories: Set<UUID> = []
-
-    // New category form
-    @State private var newCategoryName: String = ""
-    @State private var newCategoryIcon: String = "tag.fill"
-    @State private var newCategoryColor: String = "6366F1"
-
-    private let iconOptions = [
-        "tag.fill", "cup.and.saucer.fill", "book.fill", "gift.fill",
-        "house.fill", "airplane", "tshirt.fill", "wrench.and.screwdriver.fill",
-        "graduationcap.fill", "pawprint.fill", "music.note", "dumbbell.fill",
-    ]
-
-    private let colorOptions = [
-        "FF6B6B", "4ECDC4", "A78BFA", "FBBF24",
-        "F472B6", "34D399", "6366F1", "F97316",
-        "06B6D4", "9CA3AF",
-    ]
+    @State private var showCategorySheet: Bool = false
 
     private var isEditing: Bool { existingExpense != nil }
 
@@ -54,11 +36,8 @@ struct AddExpenseSheet: View {
                     .pickerStyle(.segmented)
                     .onChange(of: isIncome) { _, newValue in
                         if newValue {
-                            // Auto-select Income category
                             selectedCategory = viewModel.incomeCategory()
-                            showNewCategory = false
                         } else {
-                            // Clear auto-set category so user picks one
                             if selectedCategory?.name == "Income" {
                                 selectedCategory = nil
                             }
@@ -87,37 +66,55 @@ struct AddExpenseSheet: View {
                             .frame(height: 1)
                     }
 
-                    // Category picker (hidden when Income is selected)
+                    // Category row (tappable → opens sheet)
                     if !isIncome {
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text("Category")
-                                    .font(.system(.caption, design: .rounded, weight: .medium))
-                                    .foregroundStyle(.secondary)
+                        VStack(spacing: 8) {
+                            Text("Category")
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                                Spacer()
+                            Button {
+                                showCategorySheet = true
+                            } label: {
+                                HStack(spacing: 10) {
+                                    if let cat = selectedCategory {
+                                        Image(systemName: cat.icon)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(Color(hex: cat.colorHex))
+                                            .frame(width: 28, height: 28)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                    .fill(Color(hex: cat.colorHex).opacity(0.12))
+                                            )
 
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        showNewCategory.toggle()
+                                        Text(cat.name)
+                                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                            .foregroundStyle(.primary)
+                                    } else {
+                                        Image(systemName: "square.grid.2x2")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 28, height: 28)
+
+                                        Text("Select a category")
+                                            .font(.system(.subheadline, design: .rounded))
+                                            .foregroundStyle(.secondary)
                                     }
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: showNewCategory ? "xmark" : "plus")
-                                            .font(.caption2)
-                                        Text(showNewCategory ? "Cancel" : "New")
-                                            .font(.system(.caption, design: .rounded, weight: .medium))
-                                    }
-                                    .foregroundStyle(.primary.opacity(0.6))
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(.primary.opacity(0.25))
                                 }
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color(.tertiarySystemFill))
+                                )
                             }
-
-                            if showNewCategory {
-                                newCategoryForm
-                            }
-
-                            // Category accordion list
-                            categoryAccordionPicker
+                            .buttonStyle(.plain)
                         }
                     } else {
                         // Show income category indicator
@@ -194,6 +191,13 @@ struct AddExpenseSheet: View {
             .onAppear {
                 prefillFields()
             }
+            .sheet(isPresented: $showCategorySheet) {
+                CategorySelectionSheet(
+                    viewModel: viewModel,
+                    selectedCategory: $selectedCategory
+                )
+                .presentationDetents([.large])
+            }
         }
     }
 
@@ -236,199 +240,590 @@ struct AddExpenseSheet: View {
         }
         dismiss()
     }
+}
 
-    // MARK: - New Category Form
+// MARK: - Category Selection Sheet
 
-    private var newCategoryForm: some View {
-        VStack(spacing: 12) {
-            TextField("Category name", text: $newCategoryName)
-                .font(.system(.body, design: .rounded))
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.tertiarySystemFill))
-                )
+struct CategorySelectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var viewModel: DashboardViewModel
+    @Binding var selectedCategory: Category?
 
-            // Icon picker
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(iconOptions, id: \.self) { icon in
-                        Image(systemName: icon)
-                            .font(.system(size: 16))
-                            .frame(width: 36, height: 36)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(newCategoryIcon == icon
-                                          ? Color.primary.opacity(0.1)
-                                          : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .strokeBorder(newCategoryIcon == icon
-                                                  ? Color.primary.opacity(0.3)
-                                                  : Color.clear, lineWidth: 1)
-                            )
-                            .onTapGesture { newCategoryIcon = icon }
+    @State private var expandedHeadCategories: Set<UUID> = []
+    @State private var showAddHeadCategory: Bool = false
+    @State private var targetHeadCategory: HeadCategory? = nil
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // 1. Most Frequent categories
+                let frequent = mostFrequentCategories(limit: 3)
+                if !frequent.isEmpty {
+                    Section {
+                        ForEach(frequent, id: \.id) { category in
+                            categoryButton(for: category)
+                        }
+                    } header: {
+                        Text("Most Frequent")
+                    }
+                }
+
+                // 2. Head categories with sub-categories
+                ForEach(viewModel.headCategories, id: \.id) { head in
+                    Section {
+                        let children = viewModel.categories.filter { $0.headCategory?.id == head.id }
+
+                        // Head category label row
+                        DisclosureGroup(
+                            isExpanded: expandedBinding(for: head.id)
+                        ) {
+                            ForEach(children, id: \.id) { category in
+                                subCategoryButton(for: category)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            if selectedCategory?.id == category.id {
+                                                selectedCategory = nil
+                                            }
+                                            viewModel.deleteCategory(category)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                            }
+
+                            // Add sub-category button
+                            Button {
+                                targetHeadCategory = head
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus.circle")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color(hex: head.colorHex).opacity(0.6))
+
+                                    Text("Add sub-category")
+                                        .font(.system(.caption, design: .rounded, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: head.icon)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color(hex: head.colorHex))
+                                    .frame(width: 30, height: 30)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .fill(Color(hex: head.colorHex).opacity(0.12))
+                                    )
+
+                                Text(head.name)
+                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                let count = viewModel.categories.filter { $0.headCategory?.id == head.id }.count
+                                Text("\(count)")
+                                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color(.tertiarySystemFill))
+                                    )
+                            }
+                        }
+                        .tint(.secondary)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                // Clear selection if a child was selected
+                                let childIds = viewModel.categories
+                                    .filter { $0.headCategory?.id == head.id }
+                                    .map { $0.id }
+                                if let sel = selectedCategory, childIds.contains(sel.id) {
+                                    selectedCategory = nil
+                                }
+                                viewModel.deleteHeadCategory(head)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    } header: {
+                        if head.id == viewModel.headCategories.first?.id {
+                            Text("Head Categories")
+                        }
+                    }
+                }
+
+                // 3. Standalone categories (no head category, excluding Income)
+                let standalone = viewModel.categories.filter {
+                    $0.headCategory == nil && $0.name != "Income"
+                }
+
+                if !standalone.isEmpty {
+                    Section {
+                        ForEach(standalone, id: \.id) { category in
+                            categoryButton(for: category)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        if selectedCategory?.id == category.id {
+                                            selectedCategory = nil
+                                        }
+                                        viewModel.deleteCategory(category)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                        }
+                    } header: {
+                        Text("Other Categories")
                     }
                 }
             }
-
-            // Color picker
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(colorOptions, id: \.self) { hex in
-                        Circle()
-                            .fill(Color(hex: hex))
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Circle()
-                                    .strokeBorder(Color.primary, lineWidth: newCategoryColor == hex ? 2 : 0)
-                                    .padding(newCategoryColor == hex ? -2 : 0)
-                            )
-                            .onTapGesture { newCategoryColor = hex }
-                    }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Select Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .font(.system(.body, design: .rounded))
                 }
-            }
-
-            Button {
-                guard !newCategoryName.isEmpty else { return }
-                viewModel.addCategory(
-                    name: newCategoryName,
-                    icon: newCategoryIcon,
-                    colorHex: newCategoryColor
-                )
-                newCategoryName = ""
-                withAnimation { showNewCategory = false }
-            } label: {
-                Text("Add Category")
-                    .font(.system(.caption, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(newCategoryName.isEmpty
-                                  ? Color.primary.opacity(0.2)
-                                  : Color.primary)
-                    )
-            }
-            .disabled(newCategoryName.isEmpty)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-
-    // MARK: - Category Accordion Picker
-
-    private var categoryAccordionPicker: some View {
-        VStack(spacing: 4) {
-            // 1. Standalone categories (no head category), excluding Income
-            let standaloneCategories = viewModel.categories.filter {
-                $0.headCategory == nil && $0.name != "Income"
-            }
-            ForEach(standaloneCategories, id: \.id) { category in
-                categoryRow(for: category)
-            }
-
-            // 2. Head categories as disclosure groups
-            ForEach(viewModel.headCategories, id: \.id) { head in
-                DisclosureGroup(
-                    isExpanded: expandedBinding(for: head.id)
-                ) {
-                    let children = viewModel.categories.filter {
-                        $0.headCategory?.id == head.id
-                    }
-                    ForEach(children, id: \.id) { category in
-                        categoryRow(for: category)
-                            .padding(.leading, 8)
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: head.icon)
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color(hex: head.colorHex))
-                            .frame(width: 28, height: 28)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(Color(hex: head.colorHex).opacity(0.12))
-                            )
-
-                        Text(head.name)
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            showAddHeadCategory = true
+                        } label: {
+                            Label("New Head Category", systemImage: "folder.badge.plus")
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22))
                             .foregroundStyle(.primary)
                     }
                 }
-                .tint(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.tertiarySystemFill))
-                )
+            }
+            .sheet(isPresented: $showAddHeadCategory) {
+                AddHeadCategorySheet(viewModel: viewModel)
+                    .presentationDetents([.large])
+            }
+            .sheet(item: $targetHeadCategory) { head in
+                AddSubCategorySheet(viewModel: viewModel, headCategory: head)
+                    .presentationDetents([.large])
             }
         }
     }
 
-    private func categoryRow(for category: Category) -> some View {
-        let isSelected = selectedCategory?.id == category.id
-        return HStack(spacing: 10) {
-            Image(systemName: category.icon)
-                .font(.system(size: 13))
-                .foregroundStyle(Color(hex: category.colorHex))
-                .frame(width: 26, height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color(hex: category.colorHex).opacity(0.12))
-                )
+    // MARK: - Section Header
 
-            Text(category.name)
-                .font(.system(.subheadline, design: .rounded, weight: .medium))
-                .foregroundStyle(.primary)
+    private func sectionHeader(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
 
             Spacer()
-
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color(hex: category.colorHex))
-            }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected
-                      ? Color(hex: category.colorHex).opacity(0.1)
-                      : Color(.tertiarySystemFill))
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+    }
+
+    // MARK: - Most Frequent
+
+    private func mostFrequentCategories(limit: Int) -> [Category] {
+        let nonIncome = viewModel.categories.filter {
+            $0.name != "Income" && !$0.expenses.isEmpty
+        }
+        return Array(
+            nonIncome
+                .sorted { $0.expenses.count > $1.expenses.count }
+                .prefix(limit)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(isSelected
-                              ? Color(hex: category.colorHex).opacity(0.3)
-                              : Color.clear, lineWidth: 1)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
+    }
+
+    // MARK: - Category Row (standalone / most frequent)
+
+    private func categoryButton(for category: Category) -> some View {
+        let isSelected = selectedCategory?.id == category.id
+
+        return Button {
             withAnimation(.easeInOut(duration: 0.15)) {
                 selectedCategory = category
             }
+            dismiss()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(hex: category.colorHex))
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color(hex: category.colorHex).opacity(0.12))
+                    )
+
+                Text(category.name)
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color(hex: category.colorHex))
+                }
+            }
         }
+        .buttonStyle(.plain)
     }
+
+    // MARK: - Sub-Category Row
+
+    private func subCategoryButton(for category: Category) -> some View {
+        let isSelected = selectedCategory?.id == category.id
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                selectedCategory = category
+            }
+            dismiss()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color(hex: category.colorHex))
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color(hex: category.colorHex).opacity(0.1))
+                    )
+
+                Text(category.name)
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color(hex: category.colorHex))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Helpers
 
     private func expandedBinding(for headId: UUID) -> Binding<Bool> {
         Binding(
             get: { expandedHeadCategories.contains(headId) },
             set: { isExpanded in
-                if isExpanded {
-                    expandedHeadCategories.insert(headId)
-                } else {
-                    expandedHeadCategories.remove(headId)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if isExpanded {
+                        expandedHeadCategories.insert(headId)
+                    } else {
+                        expandedHeadCategories.remove(headId)
+                    }
                 }
             }
         )
+    }
+}
+
+// MARK: - Add Head Category Sheet
+
+struct AddHeadCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var viewModel: DashboardViewModel
+
+    @State private var name: String = ""
+    @State private var selectedIcon: String = "folder.fill"
+    @State private var selectedColor: String = "6366F1"
+
+    private let iconOptions = [
+        "folder.fill", "tray.full.fill", "archivebox.fill", "cart.fill",
+        "house.fill", "car.fill", "heart.fill", "fork.knife",
+        "airplane", "briefcase.fill", "book.fill", "gift.fill",
+        "gamecontroller.fill", "graduationcap.fill", "wrench.and.screwdriver.fill",
+        "leaf.fill", "star.fill", "flame.fill",
+    ]
+
+    private let colorOptions = [
+        "FF6B6B", "4ECDC4", "A78BFA", "FBBF24",
+        "F472B6", "34D399", "6366F1", "F97316",
+        "06B6D4", "9CA3AF",
+    ]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Preview
+                HStack(spacing: 12) {
+                    Image(systemName: selectedIcon)
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color(hex: selectedColor))
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color(hex: selectedColor).opacity(0.12))
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name.isEmpty ? "Head Category" : name)
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .foregroundStyle(name.isEmpty ? .secondary : .primary)
+
+                        Text("Parent group")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(.secondarySystemBackground))
+                )
+
+                // Name
+                TextField("Category name", text: $name)
+                    .font(.system(.body, design: .rounded))
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(.tertiarySystemFill))
+                    )
+
+                // Icon picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Icon")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                        ForEach(iconOptions, id: \.self) { icon in
+                            Image(systemName: icon)
+                                .font(.system(size: 16))
+                                .frame(width: 40, height: 40)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(selectedIcon == icon
+                                              ? Color(hex: selectedColor).opacity(0.15)
+                                              : Color(.tertiarySystemFill))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .strokeBorder(selectedIcon == icon
+                                                      ? Color(hex: selectedColor).opacity(0.4)
+                                                      : Color.clear, lineWidth: 1.5)
+                                )
+                                .onTapGesture { selectedIcon = icon }
+                        }
+                    }
+                }
+
+                // Color picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Color")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 10) {
+                        ForEach(colorOptions, id: \.self) { hex in
+                            Circle()
+                                .fill(Color(hex: hex))
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Circle()
+                                        .strokeBorder(Color.primary,
+                                                      lineWidth: selectedColor == hex ? 2.5 : 0)
+                                        .padding(selectedColor == hex ? -3 : 0)
+                                )
+                                .onTapGesture { selectedColor = hex }
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("New Head Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .font(.system(.body, design: .rounded))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        viewModel.addHeadCategory(
+                            name: name.trimmingCharacters(in: .whitespaces),
+                            icon: selectedIcon,
+                            colorHex: selectedColor
+                        )
+                        dismiss()
+                    }
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Add Sub-Category Sheet
+
+struct AddSubCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var viewModel: DashboardViewModel
+    let headCategory: HeadCategory
+
+    @State private var name: String = ""
+    @State private var selectedIcon: String = "tag.fill"
+
+    private let iconOptions = [
+        "tag.fill", "cup.and.saucer.fill", "book.fill", "gift.fill",
+        "house.fill", "airplane", "tshirt.fill", "wrench.and.screwdriver.fill",
+        "graduationcap.fill", "pawprint.fill", "music.note", "dumbbell.fill",
+        "fork.knife", "cart.fill", "fuelpump.fill", "cross.case.fill",
+        "film.fill", "paintbrush.fill",
+    ]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Parent indicator
+                HStack(spacing: 10) {
+                    Image(systemName: headCategory.icon)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color(hex: headCategory.colorHex))
+                        .frame(width: 28, height: 28)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color(hex: headCategory.colorHex).opacity(0.12))
+                        )
+
+                    Text("Under: \(headCategory.name)")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    // Color chip showing inherited color
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(hex: headCategory.colorHex))
+                            .frame(width: 10, height: 10)
+
+                        Text("Color inherited")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color(.tertiarySystemFill))
+                    )
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(hex: headCategory.colorHex).opacity(0.06))
+                )
+
+                // Preview
+                HStack(spacing: 12) {
+                    Image(systemName: selectedIcon)
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color(hex: headCategory.colorHex))
+                        .frame(width: 40, height: 40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color(hex: headCategory.colorHex).opacity(0.12))
+                        )
+
+                    Text(name.isEmpty ? "Sub-category" : name)
+                        .font(.system(.body, design: .rounded, weight: .medium))
+                        .foregroundStyle(name.isEmpty ? .secondary : .primary)
+
+                    Spacer()
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.secondarySystemBackground))
+                )
+
+                // Name
+                TextField("Sub-category name", text: $name)
+                    .font(.system(.body, design: .rounded))
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(.tertiarySystemFill))
+                    )
+
+                // Icon picker (no color picker — color is inherited)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Icon")
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                        ForEach(iconOptions, id: \.self) { icon in
+                            Image(systemName: icon)
+                                .font(.system(size: 16))
+                                .frame(width: 40, height: 40)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(selectedIcon == icon
+                                              ? Color(hex: headCategory.colorHex).opacity(0.15)
+                                              : Color(.tertiarySystemFill))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .strokeBorder(selectedIcon == icon
+                                                      ? Color(hex: headCategory.colorHex).opacity(0.4)
+                                                      : Color.clear, lineWidth: 1.5)
+                                )
+                                .onTapGesture { selectedIcon = icon }
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("New Sub-Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .font(.system(.body, design: .rounded))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        viewModel.addSubCategory(
+                            name: name.trimmingCharacters(in: .whitespaces),
+                            icon: selectedIcon,
+                            under: headCategory
+                        )
+                        dismiss()
+                    }
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
     }
 }
 

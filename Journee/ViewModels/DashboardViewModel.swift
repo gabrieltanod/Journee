@@ -222,6 +222,23 @@ final class DashboardViewModel {
         loadCategories()
     }
 
+    func addHeadCategory(name: String, icon: String, colorHex: String) {
+        let head = HeadCategory(name: name, icon: icon, colorHex: colorHex)
+        modelContext.insert(head)
+        try? modelContext.save()
+        loadHeadCategories()
+    }
+
+    /// Sub-categories inherit the parent HeadCategory's color
+    func addSubCategory(name: String, icon: String, under headCategory: HeadCategory) {
+        let category = Category(name: name, icon: icon, colorHex: headCategory.colorHex)
+        category.headCategory = headCategory
+        modelContext.insert(category)
+        try? modelContext.save()
+        loadCategories()
+        loadHeadCategories()
+    }
+
     /// Returns the "Income" category, creating it if needed
     func incomeCategory() -> Category? {
         if let existing = categories.first(where: { $0.name == "Income" }) {
@@ -232,5 +249,19 @@ final class DashboardViewModel {
         try? modelContext.save()
         loadCategories()
         return categories.first(where: { $0.name == "Income" })
+    }
+
+    func deleteCategory(_ category: Category) {
+        modelContext.delete(category)
+        try? modelContext.save()
+        loadCategories()
+        loadHeadCategories()
+    }
+
+    func deleteHeadCategory(_ headCategory: HeadCategory) {
+        modelContext.delete(headCategory)
+        try? modelContext.save()
+        loadCategories()
+        loadHeadCategories()
     }
 }

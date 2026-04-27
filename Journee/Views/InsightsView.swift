@@ -31,14 +31,22 @@ struct InsightsView: View {
 
 struct InsightsContent: View {
     @Bindable var viewModel: InsightsViewModel
+    @State private var expandedHeadCategories: Set<String> = []
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     cycleNavigator
+                    groupingPicker
                     donutChartCard
-                    categoryListCard
+
+                    // List — switches between accordion and flat
+                    if viewModel.groupingMode == .headCategories {
+                        headCategoryListCard
+                    } else {
+                        categoryListCard
+                    }
 
                     // Total Income section
                     if viewModel.totalIncome > 0 {
@@ -52,6 +60,17 @@ struct InsightsContent: View {
             .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    // MARK: - Grouping Picker
+
+    private var groupingPicker: some View {
+        Picker("Grouping", selection: $viewModel.groupingMode) {
+            ForEach(InsightsGrouping.allCases) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Cycle Navigator
@@ -97,7 +116,9 @@ struct InsightsContent: View {
 
     private var donutChartCard: some View {
         VStack(spacing: 16) {
-            if viewModel.categoryBreakdown.isEmpty {
+            let slices = viewModel.activeChartSlices
+
+            if slices.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "chart.pie")
                         .font(.system(size: 40))
@@ -110,7 +131,7 @@ struct InsightsContent: View {
                 .frame(height: 260)
                 .frame(maxWidth: .infinity)
             } else {
-                Chart(viewModel.categoryBreakdown) { slice in
+                Chart(slices) { slice in
                     SectorMark(
                         angle: .value("Amount", slice.amount),
                         innerRadius: .ratio(0.6),
@@ -125,7 +146,7 @@ struct InsightsContent: View {
                 .overlay {
                     donutCenter
                 }
-                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedSlice)
+                .animation(.easeInOut(duration: 0.25), value: viewModel.activeSelectedSlice)
             }
         }
         .padding(20)
@@ -143,21 +164,21 @@ struct InsightsContent: View {
     @State private var chartAngleSelection: Double?
 
     private func selectedOpacity(for slice: CategorySlice) -> Double {
-        guard let selected = viewModel.selectedSlice else { return 1.0 }
+        guard let selected = viewModel.activeSelectedSlice else { return 1.0 }
         return slice.name == selected.name ? 1.0 : 0.4
     }
 
     private func selectSlice(for value: Double?) {
         guard let value else {
-            viewModel.selectedSlice = nil
+            viewModel.selectActiveSlice(nil)
             return
         }
 
         var cumulative: Double = 0
-        for slice in viewModel.categoryBreakdown {
+        for slice in viewModel.activeChartSlices {
             cumulative += slice.amount
             if value <= cumulative {
-                viewModel.selectedSlice = slice
+                viewModel.selectActiveSlice(slice)
                 return
             }
         }
@@ -165,7 +186,7 @@ struct InsightsContent: View {
 
     private var donutCenter: some View {
         VStack(spacing: 4) {
-            if let selected = viewModel.selectedSlice {
+            if let selected = viewModel.activeSelectedSlice {
                 Image(systemName: selected.icon)
                     .font(.system(size: 20))
                     .foregroundStyle(selected.color)
@@ -190,7 +211,7 @@ struct InsightsContent: View {
         .contentTransition(.numericText())
     }
 
-    // MARK: - Category List
+    // MARK: - State B: Flat Category List (original)
 
     private var categoryListCard: some View {
         VStack(spacing: 0) {
@@ -203,32 +224,7 @@ struct InsightsContent: View {
                         cycle: viewModel.currentCycle
                     )
                 } label: {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(slice.color)
-                            .frame(width: 10, height: 10)
-
-                        Image(systemName: slice.icon)
-                            .font(.system(size: 14))
-                            .foregroundStyle(slice.color)
-                            .frame(width: 24)
-
-                        Text(slice.name)
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(.primary)
-
-                        Spacer()
-
-                        Text(formattedCurrency(slice.amount))
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                            .foregroundStyle(.primary)
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.primary.opacity(0.25))
-                    }
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
+                    flatCategoryRow(slice: slice)
                 }
                 .buttonStyle(.plain)
 
@@ -241,6 +237,155 @@ struct InsightsContent: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private func flatCategoryRow(slice: CategorySlice) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(slice.color)
+                .frame(width: 10, height: 10)
+
+            Image(systemName: slice.icon)
+                .font(.system(size: 14))
+                .foregroundStyle(slice.color)
+                .frame(width: 24)
+
+            Text(slice.name)
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Text(formattedCurrency(slice.amount))
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(.primary)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.primary.opacity(0.25))
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - State A: Head Category Accordion List
+
+    private var headCategoryListCard: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(viewModel.headCategoryBreakdown.enumerated()), id: \.element.id) { index, headSlice in
+                if headSlice.isStandalone {
+                    // Standalone category — render as a flat row with navigation
+                    if let child = headSlice.children.first {
+                        NavigationLink {
+                            CategoryDetailView(
+                                categoryName: child.name,
+                                categoryIcon: child.icon,
+                                categoryColorHex: child.colorHex,
+                                cycle: viewModel.currentCycle
+                            )
+                        } label: {
+                            flatCategoryRow(slice: CategorySlice(
+                                name: headSlice.name,
+                                amount: headSlice.totalAmount,
+                                icon: headSlice.icon,
+                                colorHex: headSlice.colorHex
+                            ))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    // Head category — render as a DisclosureGroup
+                    DisclosureGroup(
+                        isExpanded: expandedBinding(for: headSlice.name)
+                    ) {
+                        ForEach(headSlice.children) { child in
+                            NavigationLink {
+                                CategoryDetailView(
+                                    categoryName: child.name,
+                                    categoryIcon: child.icon,
+                                    categoryColorHex: child.colorHex,
+                                    cycle: viewModel.currentCycle
+                                )
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Circle()
+                                        .fill(child.color)
+                                        .frame(width: 8, height: 8)
+
+                                    Image(systemName: child.icon)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(child.color)
+                                        .frame(width: 22)
+
+                                    Text(child.name)
+                                        .font(.system(.caption, design: .rounded, weight: .medium))
+                                        .foregroundStyle(.primary)
+
+                                    Spacer()
+
+                                    Text(formattedCurrency(child.amount))
+                                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                                        .foregroundStyle(.primary)
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundStyle(.primary.opacity(0.2))
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 8)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(Color(hex: headSlice.colorHex))
+                                .frame(width: 10, height: 10)
+
+                            Image(systemName: headSlice.icon)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color(hex: headSlice.colorHex))
+                                .frame(width: 24)
+
+                            Text(headSlice.name)
+                                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(formattedCurrency(headSlice.totalAmount))
+                                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .tint(.secondary)
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 16)
+                }
+
+                if index < viewModel.headCategoryBreakdown.count - 1 {
+                    Divider()
+                        .padding(.leading, 52)
+                }
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private func expandedBinding(for name: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedHeadCategories.contains(name) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedHeadCategories.insert(name)
+                } else {
+                    expandedHeadCategories.remove(name)
+                }
+            }
         )
     }
 
