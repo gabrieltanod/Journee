@@ -17,6 +17,7 @@ final class DashboardViewModel {
     var currentBudget: MonthlyBudget?
     var expenses: [Expense] = []
     var categories: [Category] = []
+    var headCategories: [HeadCategory] = []
     var currentCycle: PaydayCycle
     var showBudgetPrompt: Bool = false
     var showAddExpense: Bool = false
@@ -43,6 +44,7 @@ final class DashboardViewModel {
         loadBudget()
         loadExpenses()
         loadCategories()
+        loadHeadCategories()
     }
 
     private func loadBudget() {
@@ -69,6 +71,11 @@ final class DashboardViewModel {
     private func loadCategories() {
         let descriptor = FetchDescriptor<Category>(sortBy: [SortDescriptor(\.name)])
         categories = (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    private func loadHeadCategories() {
+        let descriptor = FetchDescriptor<HeadCategory>(sortBy: [SortDescriptor(\.name)])
+        headCategories = (try? modelContext.fetch(descriptor)) ?? []
     }
 
     var hasBudget: Bool {

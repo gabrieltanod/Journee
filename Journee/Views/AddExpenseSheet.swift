@@ -15,6 +15,7 @@ struct AddExpenseSheet: View {
     @State private var selectedDate: Date = Date()
     @State private var showNewCategory: Bool = false
     @State private var isIncome: Bool = false
+    @State private var expandedHeadCategories: Set<UUID> = []
 
     // New category form
     @State private var newCategoryName: String = ""
@@ -115,22 +116,8 @@ struct AddExpenseSheet: View {
                                 newCategoryForm
                             }
 
-                            // Category chips — filter out Income category
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(viewModel.categories.filter { $0.name != "Income" }, id: \.id) { category in
-                                        CategoryChip(
-                                            category: category,
-                                            isSelected: selectedCategory?.id == category.id
-                                        )
-                                        .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.15)) {
-                                                selectedCategory = category
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            // Category accordion list
+                            categoryAccordionPicker
                         }
                     } else {
                         // Show income category indicator
@@ -331,6 +318,116 @@ struct AddExpenseSheet: View {
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    // MARK: - Category Accordion Picker
+
+    private var categoryAccordionPicker: some View {
+        VStack(spacing: 4) {
+            // 1. Standalone categories (no head category), excluding Income
+            let standaloneCategories = viewModel.categories.filter {
+                $0.headCategory == nil && $0.name != "Income"
+            }
+            ForEach(standaloneCategories, id: \.id) { category in
+                categoryRow(for: category)
+            }
+
+            // 2. Head categories as disclosure groups
+            ForEach(viewModel.headCategories, id: \.id) { head in
+                DisclosureGroup(
+                    isExpanded: expandedBinding(for: head.id)
+                ) {
+                    let children = viewModel.categories.filter {
+                        $0.headCategory?.id == head.id
+                    }
+                    ForEach(children, id: \.id) { category in
+                        categoryRow(for: category)
+                            .padding(.leading, 8)
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: head.icon)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color(hex: head.colorHex))
+                            .frame(width: 28, height: 28)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color(hex: head.colorHex).opacity(0.12))
+                            )
+
+                        Text(head.name)
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .tint(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                )
+            }
+        }
+    }
+
+    private func categoryRow(for category: Category) -> some View {
+        let isSelected = selectedCategory?.id == category.id
+        return HStack(spacing: 10) {
+            Image(systemName: category.icon)
+                .font(.system(size: 13))
+                .foregroundStyle(Color(hex: category.colorHex))
+                .frame(width: 26, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color(hex: category.colorHex).opacity(0.12))
+                )
+
+            Text(category.name)
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(hex: category.colorHex))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected
+                      ? Color(hex: category.colorHex).opacity(0.1)
+                      : Color(.tertiarySystemFill))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(isSelected
+                              ? Color(hex: category.colorHex).opacity(0.3)
+                              : Color.clear, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                selectedCategory = category
+            }
+        }
+    }
+
+    private func expandedBinding(for headId: UUID) -> Binding<Bool> {
+        Binding(
+            get: { expandedHeadCategories.contains(headId) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedHeadCategories.insert(headId)
+                } else {
+                    expandedHeadCategories.remove(headId)
+                }
+            }
         )
     }
 }
