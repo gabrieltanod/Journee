@@ -33,9 +33,73 @@ struct CategorySelectionSheet: View {
                         let children = viewModel.categories.filter { $0.headCategory?.id == head.id }
 
                         // Head category label row
-                        DisclosureGroup(
-                            isExpanded: expandedBinding(for: head.id)
-                        ) {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                if expandedHeadCategories.contains(head.id) {
+                                    expandedHeadCategories.remove(head.id)
+                                } else {
+                                    expandedHeadCategories.insert(head.id)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: head.icon)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color(hex: head.colorHex))
+                                    .frame(width: 30, height: 30)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .fill(Color(hex: head.colorHex).opacity(0.12))
+                                    )
+
+                                Text(head.name)
+                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                let count = viewModel.categories.filter { $0.headCategory?.id == head.id }.count
+                                Text("\(count)")
+                                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color(.tertiarySystemFill))
+                                    )
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .rotationEffect(.degrees(expandedHeadCategories.contains(head.id) ? 90 : 0))
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                // Clear selection if a child was selected
+                                let childIds = viewModel.categories
+                                    .filter { $0.headCategory?.id == head.id }
+                                    .map { $0.id }
+                                if let sel = selectedCategory, childIds.contains(sel.id) {
+                                    selectedCategory = nil
+                                }
+                                viewModel.deleteHeadCategory(head)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+
+                            Button {
+                                headCategoryToEdit = head
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
+
+                        if expandedHeadCategories.contains(head.id) {
                             ForEach(children, id: \.id) { category in
                                 subCategoryButton(for: category)
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -71,56 +135,6 @@ struct CategorySelectionSheet: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: head.icon)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(Color(hex: head.colorHex))
-                                    .frame(width: 30, height: 30)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                            .fill(Color(hex: head.colorHex).opacity(0.12))
-                                    )
-
-                                Text(head.name)
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(.primary)
-
-                                Spacer()
-
-                                let count = viewModel.categories.filter { $0.headCategory?.id == head.id }.count
-                                Text("\(count)")
-                                    .font(.system(.caption2, design: .rounded, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color(.tertiarySystemFill))
-                                    )
-                            }
-                        }
-                        .tint(.secondary)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                // Clear selection if a child was selected
-                                let childIds = viewModel.categories
-                                    .filter { $0.headCategory?.id == head.id }
-                                    .map { $0.id }
-                                if let sel = selectedCategory, childIds.contains(sel.id) {
-                                    selectedCategory = nil
-                                }
-                                viewModel.deleteHeadCategory(head)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-
-                            Button {
-                                headCategoryToEdit = head
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
                         }
                     } header: {
                         if head.id == viewModel.headCategories.first?.id {
