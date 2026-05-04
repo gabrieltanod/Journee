@@ -15,6 +15,7 @@ struct AddExpenseSheet: View {
     @State private var selectedDate: Date = Date()
     @State private var isIncome: Bool = false
     @State private var showCategorySheet: Bool = false
+    @State private var selectedWallet: Wallet?
 
     private var isEditing: Bool { existingExpense != nil }
 
@@ -168,6 +169,64 @@ struct AddExpenseSheet: View {
                             .labelsHidden()
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+
+                    // Wallet (From)
+                    VStack(spacing: 8) {
+                        Text("From")
+                            .font(.system(.caption, design: .rounded, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Menu {
+                            ForEach(viewModel.wallets, id: \.id) { wallet in
+                                Button {
+                                    selectedWallet = wallet
+                                } label: {
+                                    Label {
+                                        Text(wallet.name)
+                                    } icon: {
+                                        Text(wallet.emoji)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                if let wallet = selectedWallet {
+                                    Text(wallet.emoji)
+                                        .font(.system(size: 18))
+                                        .frame(width: 28, height: 28)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                .fill(Color(hex: wallet.colorHex).opacity(0.15))
+                                        )
+
+                                    Text(wallet.name)
+                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                        .foregroundStyle(.primary)
+                                } else {
+                                    Image(systemName: "wallet.bifold")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 28, height: 28)
+
+                                    Text("Select a wallet")
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.primary.opacity(0.25))
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color(.tertiarySystemFill))
+                            )
+                        }
+                    }
                 }
                 .padding(20)
             }
@@ -210,8 +269,13 @@ struct AddExpenseSheet: View {
             selectedCategory = expense.category
             selectedDate = expense.date
             isIncome = expense.isIncome
-        } else if let date = prefilledDate {
-            selectedDate = date
+            selectedWallet = expense.wallet
+        } else {
+            // Default to Cash wallet for new entries
+            selectedWallet = viewModel.defaultWallet()
+            if let date = prefilledDate {
+                selectedDate = date
+            }
         }
     }
 
@@ -227,7 +291,8 @@ struct AddExpenseSheet: View {
                 date: selectedDate,
                 note: note.isEmpty ? nil : note,
                 category: selectedCategory,
-                isIncome: isIncome
+                isIncome: isIncome,
+                wallet: selectedWallet
             )
         } else {
             viewModel.saveExpense(
@@ -235,7 +300,8 @@ struct AddExpenseSheet: View {
                 date: selectedDate,
                 note: note.isEmpty ? nil : note,
                 category: selectedCategory,
-                isIncome: isIncome
+                isIncome: isIncome,
+                wallet: selectedWallet
             )
         }
         dismiss()

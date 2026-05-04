@@ -18,6 +18,7 @@ final class DashboardViewModel {
     var expenses: [Expense] = []
     var categories: [Category] = []
     var headCategories: [HeadCategory] = []
+    var wallets: [Wallet] = []
     var currentCycle: PaydayCycle
     var showBudgetPrompt: Bool = false
     var showAddExpense: Bool = false
@@ -28,6 +29,7 @@ final class DashboardViewModel {
         self.currentCycle = PaydayCycle.cycle(containing: Date(), payday: payday)
         loadData()
         seedCategoriesIfNeeded()
+        seedDefaultWalletIfNeeded()
     }
 
     // MARK: - Payday Update
@@ -45,6 +47,7 @@ final class DashboardViewModel {
         loadExpenses()
         loadCategories()
         loadHeadCategories()
+        loadWallets()
     }
 
     private func loadBudget() {
@@ -78,6 +81,11 @@ final class DashboardViewModel {
         headCategories = (try? modelContext.fetch(descriptor)) ?? []
     }
 
+    private func loadWallets() {
+        let descriptor = FetchDescriptor<Wallet>(sortBy: [SortDescriptor(\.name)])
+        wallets = (try? modelContext.fetch(descriptor)) ?? []
+    }
+
     var hasBudget: Bool {
         currentBudget != nil
     }
@@ -101,6 +109,35 @@ final class DashboardViewModel {
                 loadCategories()
             }
         }
+    }
+
+    /// One-time migration: create default "Cash" wallet and assign all unlinked expenses to it.
+    private func seedDefaultWalletIfNeeded() {
+        let descriptor = FetchDescriptor<Wallet>()
+        let existingWallets = (try? modelContext.fetch(descriptor)) ?? []
+
+        let hasCash = existingWallets.contains { $0.name == "Cash" && $0.isDefault }
+        guard !hasCash else { return }
+
+        // Create default Cash wallet
+        let cashWallet = Wallet(
+            name: "Cash",
+            emoji: "💵",
+            colorHex: "22C55E",
+            initialBalance: 0,
+            isDefault: true
+        )
+        modelContext.insert(cashWallet)
+
+        // Assign all existing unlinked expenses to Cash
+        let expenseDescriptor = FetchDescriptor<Expense>()
+        let allExpenses = (try? modelContext.fetch(expenseDescriptor)) ?? []
+        for expense in allExpenses where expense.wallet == nil {
+            expense.wallet = cashWallet
+        }
+
+        try? modelContext.save()
+        loadWallets()
     }
 
     // MARK: - Computed Properties
@@ -187,19 +224,20 @@ final class DashboardViewModel {
 
     // MARK: - Expenses
 
-    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false) {
-        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome)
+    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil) {
+        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome, wallet: wallet)
         modelContext.insert(expense)
         try? modelContext.save()
         loadData()
     }
 
-    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false) {
+    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil) {
         expense.amount = amount
         expense.date = date
         expense.note = note
         expense.category = category
         expense.isIncome = isIncome
+        expense.wallet = wallet
         try? modelContext.save()
         loadData()
     }
@@ -291,5 +329,10 @@ final class DashboardViewModel {
         try? modelContext.save()
         loadCategories()
         loadHeadCategories()
+    }
+
+    /// Returns the default "Cash" wallet
+    func defaultWallet() -> Wallet? {
+        wallets.first(where: { $0.isDefault })
     }
 }
