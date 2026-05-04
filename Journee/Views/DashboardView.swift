@@ -138,7 +138,7 @@ struct DashboardContent: View {
                 .frame(height: 6)
 
                 HStack {
-                    Label(formattedCurrency(viewModel.totalSpent), systemImage: "arrow.up.right")
+                    Label(formattedCurrency(viewModel.totalSpentForBudget), systemImage: "arrow.up.right")
                         .font(.system(.caption2, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
 
@@ -163,11 +163,11 @@ struct DashboardContent: View {
             } else {
                 // No budget set — show spent only + option to set budget
                 VStack(spacing: 4) {
-                    Text("Spent This Cycle")
+                    Text("Spent This Month")
                         .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
 
-                    Text(formattedCurrency(viewModel.totalSpent))
+                    Text(formattedCurrency(viewModel.totalSpentForBudget))
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                 }
 

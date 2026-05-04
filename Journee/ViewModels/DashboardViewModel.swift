@@ -143,9 +143,15 @@ final class DashboardViewModel {
     // MARK: - Computed Properties
 
     var remainingBudget: Double {
-        (currentBudget?.amount ?? 0) - totalSpent
+        (currentBudget?.amount ?? 0) - totalSpentForBudget
     }
 
+    /// Total spent counting only budget-included expenses (for budget card)
+    var totalSpentForBudget: Double {
+        expenses.filter { !$0.isIncome && !$0.isExcludedFromBudget }.reduce(0) { $0 + $1.amount }
+    }
+
+    /// Total spent including ALL expenses (for summary row)
     var totalSpent: Double {
         expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
     }
@@ -160,7 +166,7 @@ final class DashboardViewModel {
 
     var spentPercentage: Double {
         guard budgetAmount > 0 else { return 0 }
-        return min(totalSpent / budgetAmount, 1.0)
+        return min(totalSpentForBudget / budgetAmount, 1.0)
     }
 
     var isOverBudget: Bool {
@@ -224,20 +230,21 @@ final class DashboardViewModel {
 
     // MARK: - Expenses
 
-    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil) {
-        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome, wallet: wallet)
+    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
+        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome, wallet: wallet, isExcludedFromBudget: isExcludedFromBudget)
         modelContext.insert(expense)
         try? modelContext.save()
         loadData()
     }
 
-    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil) {
+    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
         expense.amount = amount
         expense.date = date
         expense.note = note
         expense.category = category
         expense.isIncome = isIncome
         expense.wallet = wallet
+        expense.isExcludedFromBudget = isExcludedFromBudget
         try? modelContext.save()
         loadData()
     }

@@ -16,6 +16,7 @@ struct AddExpenseSheet: View {
     @State private var isIncome: Bool = false
     @State private var showCategorySheet: Bool = false
     @State private var selectedWallet: Wallet?
+    @State private var isExcludedFromBudget: Bool = false
 
     private var isEditing: Bool { existingExpense != nil }
 
@@ -227,6 +228,38 @@ struct AddExpenseSheet: View {
                             )
                         }
                     }
+
+                    // Exclude from budget toggle
+                    if !isIncome {
+                        VStack(spacing: 6) {
+                            Toggle(isOn: $isExcludedFromBudget) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "eye.slash")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(isExcludedFromBudget ? .orange : .secondary)
+
+                                    Text("Exclude from budget")
+                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                }
+                            }
+                            .tint(.orange)
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(isExcludedFromBudget ? Color.orange.opacity(0.08) : Color(.tertiarySystemFill))
+                            )
+                            .animation(.easeInOut(duration: 0.2), value: isExcludedFromBudget)
+
+                            if isExcludedFromBudget {
+                                Text("This transaction will only affect the wallet balance, not your monthly budget.")
+                                    .font(.system(.caption2, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 4)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                    }
                 }
                 .padding(20)
             }
@@ -270,6 +303,7 @@ struct AddExpenseSheet: View {
             selectedDate = expense.date
             isIncome = expense.isIncome
             selectedWallet = expense.wallet
+            isExcludedFromBudget = expense.isExcludedFromBudget
         } else {
             // Default to Cash wallet for new entries
             selectedWallet = viewModel.defaultWallet()
@@ -283,6 +317,7 @@ struct AddExpenseSheet: View {
 
     private func saveExpense() {
         guard let amount = Double(amountText) else { return }
+        let excludeFromBudget = isIncome ? false : isExcludedFromBudget
 
         if let expense = existingExpense {
             viewModel.updateExpense(
@@ -292,7 +327,8 @@ struct AddExpenseSheet: View {
                 note: note.isEmpty ? nil : note,
                 category: selectedCategory,
                 isIncome: isIncome,
-                wallet: selectedWallet
+                wallet: selectedWallet,
+                isExcludedFromBudget: excludeFromBudget
             )
         } else {
             viewModel.saveExpense(
@@ -301,7 +337,8 @@ struct AddExpenseSheet: View {
                 note: note.isEmpty ? nil : note,
                 category: selectedCategory,
                 isIncome: isIncome,
-                wallet: selectedWallet
+                wallet: selectedWallet,
+                isExcludedFromBudget: excludeFromBudget
             )
         }
         dismiss()

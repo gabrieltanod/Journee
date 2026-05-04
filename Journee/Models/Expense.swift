@@ -10,8 +10,9 @@ final class Expense {
     var category: Category?
     var isIncome: Bool = false
     var wallet: Wallet?
+    var isExcludedFromBudget: Bool = false
 
-    init(amount: Double, date: Date, note: String? = nil, category: Category? = nil, isIncome: Bool = false, wallet: Wallet? = nil) {
+    init(amount: Double, date: Date, note: String? = nil, category: Category? = nil, isIncome: Bool = false, wallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
         self.id = UUID()
         self.amount = amount
         self.date = date
@@ -19,5 +20,6 @@ final class Expense {
         self.category = category
         self.isIncome = isIncome
         self.wallet = wallet
+        self.isExcludedFromBudget = isExcludedFromBudget
     }
 }
