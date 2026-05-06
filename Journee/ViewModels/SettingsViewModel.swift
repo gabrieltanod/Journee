@@ -51,7 +51,9 @@ final class SettingsViewModel {
                     date: exp.date,
                     note: exp.note,
                     categoryName: exp.category?.name,
-                    isIncome: exp.isIncome
+                    isIncome: exp.isIncome,
+                    isTransfer: exp.isTransfer,
+                    isExcludedFromBudget: exp.isExcludedFromBudget
                 )
             }
 
@@ -140,12 +142,14 @@ final class SettingsViewModel {
             for dto in backup.expenses {
                 if !existingExpenseIDs.contains(dto.id) {
                     let linkedCategory = dto.categoryName.flatMap { categoryMap[$0] }
+                    let txType: TransactionType = dto.isTransfer ? .transfer : (dto.isIncome ? .income : .expense)
                     let expense = Expense(
                         amount: dto.amount,
                         date: dto.date,
                         note: dto.note,
                         category: linkedCategory,
-                        isIncome: dto.isIncome
+                        transactionType: txType,
+                        isExcludedFromBudget: dto.isExcludedFromBudget
                     )
                     // Preserve original UUID
                     expense.id = dto.id

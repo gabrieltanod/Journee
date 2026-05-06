@@ -50,7 +50,7 @@ struct WalletDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("What should happen to the \(wallet.expenses.count) transaction(s) in this wallet?")
+            Text("What should happen to the \(sortedExpenses.count) transaction(s) in this wallet?")
         }
         .sheet(item: $expenseToEdit) { expense in
             AddExpenseSheet(
@@ -152,8 +152,17 @@ struct WalletTransactionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Category icon
-            if let category = expense.category {
+            // Icon
+            if expense.transactionType == .transfer {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color(hex: "64748B"))
+                    )
+            } else if let category = expense.category {
                 Image(systemName: category.icon)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
@@ -176,17 +185,38 @@ struct WalletTransactionRow: View {
             // Details
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(expense.category?.name ?? "Uncategorized")
-                        .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .foregroundStyle(.primary)
+                    if expense.transactionType == .transfer {
+                        Text(expense.wallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
 
-                    if expense.isIncome {
-                        Text("INCOME")
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+
+                        Text(expense.destinationWallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        Text("TRANSFER")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(hex: "22C55E")))
+                            .background(Capsule().fill(Color(hex: "64748B")))
+                    } else {
+                        Text(expense.category?.name ?? "Uncategorized")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        if expense.transactionType == .income {
+                            Text("INCOME")
+                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color(hex: "22C55E")))
+                        }
                     }
                 }
 
@@ -207,14 +237,25 @@ struct WalletTransactionRow: View {
             // Amount
             Text(formattedAmount(expense))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
+                .foregroundStyle(amountColor)
         }
         .padding(.vertical, 4)
     }
 
+    private var amountColor: Color {
+        switch expense.transactionType {
+        case .income: return Color(hex: "22C55E")
+        case .transfer: return .secondary
+        case .expense: return .primary
+        }
+    }
+
     private func formattedAmount(_ expense: Expense) -> String {
-        let prefix = expense.isIncome ? "+" : ""
-        return prefix + expense.amount.formattedRupiah
+        switch expense.transactionType {
+        case .income: return "+" + expense.amount.formattedRupiah
+        case .transfer: return expense.amount.formattedRupiah
+        case .expense: return expense.amount.formattedRupiah
+        }
     }
 
     private func formattedDate(_ date: Date) -> String {

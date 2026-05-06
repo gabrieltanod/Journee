@@ -147,17 +147,18 @@ final class DashboardViewModel {
     }
 
     /// Total spent counting only budget-included expenses (for budget card)
+    /// Excludes transfers and budget-excluded items
     var totalSpentForBudget: Double {
-        expenses.filter { !$0.isIncome && !$0.isExcludedFromBudget }.reduce(0) { $0 + $1.amount }
+        expenses.filter { $0.transactionType == .expense && !$0.isExcludedFromBudget }.reduce(0) { $0 + $1.amount }
     }
 
-    /// Total spent including ALL expenses (for summary row)
+    /// Total spent including ALL non-transfer expenses (for summary row)
     var totalSpent: Double {
-        expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
+        expenses.filter { $0.transactionType == .expense }.reduce(0) { $0 + $1.amount }
     }
 
     var totalIncome: Double {
-        expenses.filter { $0.isIncome }.reduce(0) { $0 + $1.amount }
+        expenses.filter { $0.transactionType == .income }.reduce(0) { $0 + $1.amount }
     }
 
     var budgetAmount: Double {
@@ -174,15 +175,16 @@ final class DashboardViewModel {
     }
 
     /// Returns a dictionary of [Date (start-of-day): DailyTotal] with separated income/expense
+    /// Transfers are excluded from daily totals (they're net-zero)
     var dailyTotals: [Date: DailyTotal] {
         let calendar = Calendar.current
         var totals: [Date: DailyTotal] = [:]
-        for expense in expenses {
+        for expense in expenses where expense.transactionType != .transfer {
             let dayKey = calendar.startOfDay(for: expense.date)
             if totals[dayKey] == nil {
                 totals[dayKey] = DailyTotal()
             }
-            if expense.isIncome {
+            if expense.transactionType == .income {
                 totals[dayKey]!.income += expense.amount
             } else {
                 totals[dayKey]!.expense += expense.amount
@@ -230,20 +232,22 @@ final class DashboardViewModel {
 
     // MARK: - Expenses
 
-    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
-        let expense = Expense(amount: amount, date: date, note: note, category: category, isIncome: isIncome, wallet: wallet, isExcludedFromBudget: isExcludedFromBudget)
+    func saveExpense(amount: Double, date: Date, note: String?, category: Category?, transactionType: TransactionType = .expense, wallet: Wallet? = nil, destinationWallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
+        let expense = Expense(amount: amount, date: date, note: note, category: category, transactionType: transactionType, wallet: wallet, destinationWallet: destinationWallet, isExcludedFromBudget: isExcludedFromBudget)
         modelContext.insert(expense)
         try? modelContext.save()
         loadData()
     }
 
-    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, isIncome: Bool = false, wallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
+    func updateExpense(_ expense: Expense, amount: Double, date: Date, note: String?, category: Category?, transactionType: TransactionType = .expense, wallet: Wallet? = nil, destinationWallet: Wallet? = nil, isExcludedFromBudget: Bool = false) {
         expense.amount = amount
         expense.date = date
         expense.note = note
         expense.category = category
-        expense.isIncome = isIncome
+        expense.isIncome = (transactionType == .income)
+        expense.isTransfer = (transactionType == .transfer)
         expense.wallet = wallet
+        expense.destinationWallet = destinationWallet
         expense.isExcludedFromBudget = isExcludedFromBudget
         try? modelContext.save()
         loadData()

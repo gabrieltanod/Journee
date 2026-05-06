@@ -16,6 +16,33 @@ struct ExpenseDTO: Codable {
     let note: String?
     let categoryName: String?
     let isIncome: Bool
+    let isTransfer: Bool
+    let isExcludedFromBudget: Bool
+
+    /// Backward-compatible init with defaults for new fields
+    init(id: UUID, amount: Double, date: Date, note: String?, categoryName: String?, isIncome: Bool, isTransfer: Bool = false, isExcludedFromBudget: Bool = false) {
+        self.id = id
+        self.amount = amount
+        self.date = date
+        self.note = note
+        self.categoryName = categoryName
+        self.isIncome = isIncome
+        self.isTransfer = isTransfer
+        self.isExcludedFromBudget = isExcludedFromBudget
+    }
+
+    /// Codable: decode missing fields with defaults for backward-compat with older backups
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        amount = try container.decode(Double.self, forKey: .amount)
+        date = try container.decode(Date.self, forKey: .date)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        categoryName = try container.decodeIfPresent(String.self, forKey: .categoryName)
+        isIncome = try container.decode(Bool.self, forKey: .isIncome)
+        isTransfer = try container.decodeIfPresent(Bool.self, forKey: .isTransfer) ?? false
+        isExcludedFromBudget = try container.decodeIfPresent(Bool.self, forKey: .isExcludedFromBudget) ?? false
+    }
 }
 
 struct MonthlyBudgetDTO: Codable {

@@ -49,15 +49,22 @@ final class WalletsViewModel {
     ///   - keepTransactions: If true, transactions are kept but unlinked (nullified). If false, all associated transactions are deleted.
     func deleteWallet(_ wallet: Wallet, keepTransactions: Bool) {
         if keepTransactions {
-            // Nullify — SwiftData's .nullify delete rule handles this,
-            // but let's be explicit to ensure consistency
+            // Nullify source wallet link
             for expense in wallet.expenses {
                 expense.wallet = nil
             }
+            // Nullify destination wallet link for incoming transfers
+            for transfer in wallet.incomingTransfers {
+                transfer.destinationWallet = nil
+            }
         } else {
-            // Delete all associated transactions
+            // Delete all associated transactions (outgoing)
             for expense in wallet.expenses {
                 modelContext.delete(expense)
+            }
+            // Delete incoming transfers too
+            for transfer in wallet.incomingTransfers {
+                modelContext.delete(transfer)
             }
         }
         modelContext.delete(wallet)
@@ -70,8 +77,20 @@ final class WalletsViewModel {
         wallets.first(where: { $0.isDefault })
     }
 
-    /// Transactions for a specific wallet, sorted by date descending
+    /// All transactions involving this wallet (outgoing + incoming transfers), sorted by date descending
     func expenses(for wallet: Wallet) -> [Expense] {
-        wallet.expenses.sorted { $0.date > $1.date }
+        var seen = Set<UUID>()
+        var combined: [Expense] = []
+        for expense in wallet.expenses {
+            if seen.insert(expense.id).inserted {
+                combined.append(expense)
+            }
+        }
+        for transfer in wallet.incomingTransfers {
+            if seen.insert(transfer.id).inserted {
+                combined.append(transfer)
+            }
+        }
+        return combined.sorted { $0.date > $1.date }
     }
 }

@@ -60,7 +60,9 @@ final class HistoryViewModel {
         return allExpenses.filter { expense in
             let noteMatch = expense.note?.lowercased().contains(query) ?? false
             let categoryMatch = expense.category?.name.lowercased().contains(query) ?? false
-            return noteMatch || categoryMatch
+            let walletMatch = expense.wallet?.name.lowercased().contains(query) ?? false
+            let destWalletMatch = expense.destinationWallet?.name.lowercased().contains(query) ?? false
+            return noteMatch || categoryMatch || walletMatch || destWalletMatch
         }
     }
 

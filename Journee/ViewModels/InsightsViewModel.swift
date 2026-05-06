@@ -55,9 +55,9 @@ final class InsightsViewModel {
         )
         let allItems = (try? modelContext.fetch(descriptor)) ?? []
 
-        // Separate income and expenses
-        let expenseItems = allItems.filter { !$0.isIncome }
-        let incomeItems = allItems.filter { $0.isIncome }
+        // Separate income, expenses, and transfers
+        let expenseItems = allItems.filter { $0.transactionType == .expense }
+        let incomeItems = allItems.filter { $0.transactionType == .income }
 
         totalIncome = incomeItems.reduce(0) { $0 + $1.amount }
 

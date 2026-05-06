@@ -13,6 +13,9 @@ final class Wallet {
     @Relationship(deleteRule: .nullify, inverse: \Expense.wallet)
     var expenses: [Expense] = []
 
+    @Relationship(deleteRule: .nullify, inverse: \Expense.destinationWallet)
+    var incomingTransfers: [Expense] = []
+
     init(name: String, emoji: String, colorHex: String, initialBalance: Double = 0, isDefault: Bool = false) {
         self.id = UUID()
         self.name = name
@@ -22,10 +25,13 @@ final class Wallet {
         self.isDefault = isDefault
     }
 
-    /// Calculated balance: initialBalance + incomes − expenses
+    /// Calculated balance:
+    /// initialBalance + incomes + incoming transfers − expenses − outgoing transfers
     var calculatedBalance: Double {
         let incomes = expenses.filter { $0.isIncome }.reduce(0) { $0 + $1.amount }
-        let spent = expenses.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
-        return initialBalance + incomes - spent
+        let outgoingTransfers = expenses.filter { $0.isTransfer }.reduce(0) { $0 + $1.amount }
+        let spent = expenses.filter { !$0.isIncome && !$0.isTransfer }.reduce(0) { $0 + $1.amount }
+        let incoming = incomingTransfers.reduce(0) { $0 + $1.amount }
+        return initialBalance + incomes + incoming - spent - outgoingTransfers
     }
 }
