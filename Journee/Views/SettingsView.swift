@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     @AppStorage("notificationHour") private var notificationHour: Int = 20
     @AppStorage("notificationMinute") private var notificationMinute: Int = 0
+    @AppStorage("geminiAPIKey") private var geminiAPIKey: String = ""
     @State private var viewModel: SettingsViewModel?
     @State private var showFileImporter: Bool = false
 
@@ -176,6 +177,56 @@ struct SettingsView: View {
                     ? "You'll get a daily reminder to log your expenses."
                     : "Enable to get a daily nudge to track your spending."
                 )
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+
+            // MARK: - Journee AI Section
+            Section {
+                HStack(spacing: 14) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "818CF8"), Color(hex: "6366F1")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        )
+
+                    SecureField("Enter Gemini API Key", text: $geminiAPIKey)
+                        .font(.system(.body, design: .rounded))
+                        .textContentType(.password)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                }
+
+                if !geminiAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button(role: .destructive) {
+                        geminiAPIKey = ""
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash")
+                                .font(.system(size: 13, weight: .medium))
+
+                            Text("Remove API Key")
+                                .font(.system(.body, design: .rounded, weight: .medium))
+                        }
+                        .foregroundStyle(Color(hex: "EF4444"))
+                    }
+                }
+            } header: {
+                Text("Journee AI")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+            } footer: {
+                Text("Your API key is stored locally on your device and used only to communicate with Google Gemini. Get a free key at aistudio.google.com.")
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.tertiary)
             }

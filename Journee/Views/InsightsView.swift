@@ -5,12 +5,14 @@ import Charts
 struct InsightsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("payday") private var payday: Int = 1
+    @AppStorage("geminiAPIKey") private var geminiAPIKey: String = ""
     @State private var viewModel: InsightsViewModel?
+    @State private var aiViewModel: InsightsAIViewModel?
 
     var body: some View {
         Group {
-            if let viewModel {
-                InsightsContent(viewModel: viewModel)
+            if let viewModel, let aiViewModel {
+                InsightsContent(viewModel: viewModel, aiViewModel: aiViewModel, geminiAPIKey: geminiAPIKey)
             } else {
                 Color(.systemBackground)
                     .ignoresSafeArea()
@@ -20,9 +22,13 @@ struct InsightsView: View {
             if viewModel == nil {
                 viewModel = InsightsViewModel(modelContext: modelContext, payday: payday)
             }
+            if aiViewModel == nil {
+                aiViewModel = InsightsAIViewModel(modelContext: modelContext, payday: payday)
+            }
         }
         .onChange(of: payday) { _, newValue in
             viewModel?.updatePayday(newValue)
+            aiViewModel?.updatePayday(newValue)
         }
     }
 }
@@ -31,6 +37,8 @@ struct InsightsView: View {
 
 struct InsightsContent: View {
     @Bindable var viewModel: InsightsViewModel
+    @Bindable var aiViewModel: InsightsAIViewModel
+    var geminiAPIKey: String
     @State private var expandedHeadCategories: Set<String> = []
 
     var body: some View {
@@ -52,6 +60,9 @@ struct InsightsContent: View {
                     if viewModel.totalIncome > 0 {
                         incomeCard
                     }
+
+                    // Journee AI Audit
+                    aiAuditCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
@@ -441,6 +452,219 @@ struct InsightsContent: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Journee AI Audit Card
+
+    private var aiAuditCard: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "818CF8"), Color(hex: "6366F1")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Journee AI")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text("Cycle spending audit")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+                .padding(.horizontal, 16)
+
+            // Content — state-driven
+            Group {
+                if geminiAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    aiMissingKeyView
+                } else if aiViewModel.isLoading {
+                    aiLoadingView
+                } else if let errorMsg = aiViewModel.errorMessage {
+                    aiErrorView(message: errorMsg)
+                } else if !aiViewModel.aiAudit.isEmpty {
+                    aiResultView
+                } else {
+                    aiGenerateButton
+                }
+            }
+            .padding(16)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color(hex: "818CF8").opacity(0.12), lineWidth: 1)
+        )
+        .onChange(of: viewModel.currentCycle) { _, newCycle in
+            aiViewModel.updateCycle(newCycle)
+        }
+    }
+
+    // MARK: AI States
+
+    private var aiMissingKeyView: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(Color(hex: "F59E0B"))
+
+            Text("Please add your Gemini API Key in Settings to enable AI Audits.")
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(hex: "F59E0B").opacity(0.08))
+        )
+    }
+
+    private var aiGenerateButton: some View {
+        Button {
+            Task {
+                await aiViewModel.generateAudit(apiKey: geminiAPIKey)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+
+                Text("Generate Cycle Audit")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "818CF8"), Color(hex: "6366F1")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var aiLoadingView: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .controlSize(.regular)
+                .tint(Color(hex: "818CF8"))
+
+            Text("Analyzing your spending…")
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+
+    private var aiResultView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(aiViewModel.aiAudit)
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Regenerate button
+            Button {
+                Task {
+                    aiViewModel.aiAudit = ""
+                    await aiViewModel.generateAudit(apiKey: geminiAPIKey)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.trianglehead.2.counterclockwise")
+                        .font(.system(size: 11, weight: .semibold))
+
+                    Text("Regenerate")
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                }
+                .foregroundStyle(Color(hex: "6366F1"))
+                .padding(.top, 4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(hex: "818CF8").opacity(0.06))
+        )
+    }
+
+    private func aiErrorView(message: String) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(hex: "EF4444"))
+
+                Text(message)
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                Task {
+                    await aiViewModel.generateAudit(apiKey: geminiAPIKey)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .semibold))
+
+                    Text("Retry")
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(hex: "EF4444"))
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(hex: "EF4444").opacity(0.06))
+        )
     }
 
     // MARK: - Helpers
