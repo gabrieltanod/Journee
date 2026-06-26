@@ -15,12 +15,20 @@ final class InsightsAIViewModel {
     var isLoading: Bool = false
     var errorMessage: String?
 
+    // MARK: - Cache Key
+
+    /// Unique key per cycle for persisting the audit in UserDefaults.
+    private var cacheKey: String {
+        "journeeAI_audit_\(currentCycle.label)"
+    }
+
     // MARK: - Init
 
     init(modelContext: ModelContext, payday: Int = 1) {
         self.modelContext = modelContext
         self.payday = payday
         self.currentCycle = PaydayCycle.cycle(containing: Date(), payday: payday)
+        loadCachedAudit()
     }
 
     // MARK: - Payday Sync
@@ -28,16 +36,24 @@ final class InsightsAIViewModel {
     func updatePayday(_ newPayday: Int) {
         payday = newPayday
         currentCycle = PaydayCycle.cycle(containing: currentCycle.startDate, payday: newPayday)
-        // Reset audit when cycle changes
-        aiAudit = ""
         errorMessage = nil
+        loadCachedAudit()
     }
 
     func updateCycle(_ cycle: PaydayCycle) {
         currentCycle = cycle
-        // Reset audit when cycle changes
-        aiAudit = ""
         errorMessage = nil
+        loadCachedAudit()
+    }
+
+    // MARK: - Persistence
+
+    private func loadCachedAudit() {
+        aiAudit = UserDefaults.standard.string(forKey: cacheKey) ?? ""
+    }
+
+    private func saveCachedAudit(_ text: String) {
+        UserDefaults.standard.set(text, forKey: cacheKey)
     }
 
     // MARK: - Generate Audit
@@ -59,6 +75,7 @@ final class InsightsAIViewModel {
             let result = try await AIService.generateContent(prompt: prompt, apiKey: apiKey)
             await MainActor.run {
                 aiAudit = result
+                saveCachedAudit(result)
                 isLoading = false
             }
         } catch {
