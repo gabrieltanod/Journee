@@ -171,8 +171,18 @@ struct HistoryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Category icon
-            if let category = expense.category {
+            // Icon
+            if expense.transactionType == .transfer {
+                // Transfer icon
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color(hex: "64748B"))
+                    )
+            } else if let category = expense.category {
                 Image(systemName: category.icon)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
@@ -194,9 +204,26 @@ struct HistoryRow: View {
 
             // Details
             VStack(alignment: .leading, spacing: 2) {
-                Text(expense.category?.name ?? "Uncategorized")
-                    .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(.primary)
+                if expense.transactionType == .transfer {
+                    // Transfer: "Source ➔ Destination"
+                    HStack(spacing: 4) {
+                        Text(expense.wallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+
+                        Text(expense.destinationWallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+                    }
+                } else {
+                    Text(expense.category?.name ?? "Uncategorized")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.primary)
+                }
 
                 if let note = expense.note, !note.isEmpty {
                     Text(note)
@@ -217,14 +244,25 @@ struct HistoryRow: View {
             // Amount
             Text(formattedAmount(expense))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
+                .foregroundStyle(amountColor)
         }
         .padding(.vertical, 4)
     }
 
+    private var amountColor: Color {
+        switch expense.transactionType {
+        case .income: return Color(hex: "22C55E")
+        case .transfer: return .secondary
+        case .expense: return .primary
+        }
+    }
+
     private func formattedAmount(_ expense: Expense) -> String {
-        let prefix = expense.isIncome ? "+" : ""
-        return prefix + expense.amount.formattedRupiah
+        switch expense.transactionType {
+        case .income: return "+" + expense.amount.formattedRupiah
+        case .transfer: return expense.amount.formattedRupiah
+        case .expense: return expense.amount.formattedRupiah
+        }
     }
 
     private func formattedDate(_ date: Date) -> String {

@@ -119,8 +119,17 @@ struct ExpenseRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Category icon
-            if let category = expense.category {
+            // Icon
+            if expense.transactionType == .transfer {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(hex: "64748B"))
+                    )
+            } else if let category = expense.category {
                 Image(systemName: category.icon)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white)
@@ -143,17 +152,39 @@ struct ExpenseRow: View {
             // Details
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(expense.category?.name ?? "Uncategorized")
-                        .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .foregroundStyle(.primary)
+                    if expense.transactionType == .transfer {
+                        // Transfer: "Source → Destination"
+                        Text(expense.wallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
 
-                    if expense.isIncome {
-                        Text("INCOME")
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+
+                        Text(expense.destinationWallet?.name ?? "–")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        Text("TRANSFER")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(hex: "22C55E")))
+                            .background(Capsule().fill(Color(hex: "64748B")))
+                    } else {
+                        Text(expense.category?.name ?? "Uncategorized")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        if expense.transactionType == .income {
+                            Text("INCOME")
+                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color(hex: "22C55E")))
+                        }
                     }
                 }
 
@@ -167,12 +198,20 @@ struct ExpenseRow: View {
 
             Spacer()
 
-            // Amount — green for income, default for expense
+            // Amount
             Text(formattedCurrency(expense.amount))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
+                .foregroundStyle(amountColor)
         }
         .padding(.vertical, 4)
+    }
+
+    private var amountColor: Color {
+        switch expense.transactionType {
+        case .income: return Color(hex: "22C55E")
+        case .transfer: return .secondary
+        case .expense: return .primary
+        }
     }
 
     private func formattedCurrency(_ value: Double) -> String {

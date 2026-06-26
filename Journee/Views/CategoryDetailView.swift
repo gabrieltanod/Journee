@@ -59,11 +59,11 @@ struct CategoryDetailView: View {
         let allExpenses = (try? modelContext.fetch(descriptor)) ?? []
 
         if isIncomeCategory {
-            expenses = allExpenses.filter { $0.isIncome }
+            expenses = allExpenses.filter { $0.transactionType == .income }
         } else if isUncategorized {
-            expenses = allExpenses.filter { $0.category == nil && !$0.isIncome }
+            expenses = allExpenses.filter { $0.category == nil && $0.transactionType == .expense }
         } else {
-            expenses = allExpenses.filter { $0.category?.name == categoryName && !$0.isIncome }
+            expenses = allExpenses.filter { $0.category?.name == categoryName && $0.transactionType == .expense }
         }
     }
 
@@ -177,7 +177,7 @@ struct CategoryExpenseRow: View {
 
             Text(formattedCurrency(expense.amount))
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundStyle(expense.isIncome ? Color(hex: "22C55E") : .primary)
+                .foregroundStyle(expense.transactionType == .income ? Color(hex: "22C55E") : .primary)
         }
         .padding(.vertical, 4)
     }

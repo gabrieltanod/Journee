@@ -15,6 +15,7 @@ struct JourneeApp: App {
             Category.self,
             MonthlyBudget.self,
             HeadCategory.self,
+            Wallet.self,
         ])
     }
 }
@@ -35,6 +36,11 @@ struct RootView: View {
             InsightsView()
                 .tabItem {
                     Label("Insights", systemImage: "chart.pie.fill")
+                }
+
+            WalletsView()
+                .tabItem {
+                    Label("Wallets", systemImage: "wallet.bifold.fill")
                 }
 
             HistoryView()
