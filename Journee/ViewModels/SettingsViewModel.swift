@@ -22,6 +22,10 @@ final class SettingsViewModel {
 
     func exportBackup() {
         do {
+            // Fetch all head categories
+            let headCategoryDescriptor = FetchDescriptor<HeadCategory>(sortBy: [SortDescriptor(\.name)])
+            let headCategories = try modelContext.fetch(headCategoryDescriptor)
+
             // Fetch all categories
             let categoryDescriptor = FetchDescriptor<Category>(sortBy: [SortDescriptor(\.name)])
             let categories = try modelContext.fetch(categoryDescriptor)
@@ -35,12 +39,23 @@ final class SettingsViewModel {
             let budgets = try modelContext.fetch(budgetDescriptor)
 
             // Map to DTOs
+            let headCategoryDTOs = headCategories.map { headCat in
+                HeadCategoryDTO(
+                    id: headCat.id,
+                    name: headCat.name,
+                    icon: headCat.icon,
+                    colorHex: headCat.colorHex
+                )
+            }
+
             let categoryDTOs = categories.map { cat in
                 CategoryDTO(
                     id: cat.id,
                     name: cat.name,
                     icon: cat.icon,
-                    colorHex: cat.colorHex
+                    colorHex: cat.colorHex,
+                    headCategory: cat.headCategory?.name,
+                    headCategoryID: cat.headCategory?.id
                 )
             }
 
@@ -51,6 +66,8 @@ final class SettingsViewModel {
                     date: exp.date,
                     note: exp.note,
                     categoryName: exp.category?.name,
+                    categoryID: exp.category?.id,
+                    headCategory: exp.category?.headCategory?.name,
                     isIncome: exp.isIncome,
                     isTransfer: exp.isTransfer,
                     isExcludedFromBudget: exp.isExcludedFromBudget
@@ -67,6 +84,7 @@ final class SettingsViewModel {
             }
 
             let backup = BackupData(
+                headCategories: headCategoryDTOs,
                 categories: categoryDTOs,
                 expenses: expenseDTOs,
                 budgets: budgetDTOs
@@ -120,16 +138,81 @@ final class SettingsViewModel {
             // --- Category Merge ---
             let existingCategoryDescriptor = FetchDescriptor<Category>()
             let existingCategories = try modelContext.fetch(existingCategoryDescriptor)
-            var categoryMap: [String: Category] = [:]
+            
+            // For v2 files: track categories by ID and create a map for name+head lookup
+            // For v1 files: fall back to name-only lookup
+            var categoryByID: [UUID: Category] = [:]
+            var categoryByNameAndHead: [String: Category] = [:] // Key: "name|head" or "name" if no head
+            
             for cat in existingCategories {
-                categoryMap[cat.name] = cat
+                categoryByID[cat.id] = cat
+                let key = cat.headCategory?.name != nil ? "\(cat.name)|\(cat.headCategory!.name)" : cat.name
+                categoryByNameAndHead[key] = cat
+            }
+
+            // Also need to handle head categories
+            let existingHeadCategoryDescriptor = FetchDescriptor<HeadCategory>()
+            let existingHeadCategories = try modelContext.fetch(existingHeadCategoryDescriptor)
+            var headCategoryByID: [UUID: HeadCategory] = [:]
+            var headCategoryByName: [String: HeadCategory] = [:]
+            
+            for headCat in existingHeadCategories {
+                headCategoryByID[headCat.id] = headCat
+                headCategoryByName[headCat.name] = headCat
+            }
+            
+            // Import head categories from backup (v2 files only)
+            if let backupHeadCategories = backup.headCategories {
+                for dto in backupHeadCategories {
+                    if headCategoryByID[dto.id] == nil && headCategoryByName[dto.name] == nil {
+                        let headCat = HeadCategory(name: dto.name, icon: dto.icon, colorHex: dto.colorHex)
+                        headCat.id = dto.id
+                        modelContext.insert(headCat)
+                        headCategoryByID[headCat.id] = headCat
+                        headCategoryByName[dto.name] = headCat
+                    }
+                }
             }
 
             for dto in backup.categories {
-                if categoryMap[dto.name] == nil {
+                // Check if we already have this category by ID (for v2 files)
+                if categoryByID[dto.id] != nil {
+                    // Category already exists with same ID, skip
+                    continue
+                }
+                
+                // Try to match by name and head category
+                let lookupKey = dto.headCategory != nil ? "\(dto.name)|\(dto.headCategory!)" : dto.name
+                
+                if categoryByNameAndHead[lookupKey] == nil {
+                    // Need to create a new category
                     let newCat = Category(name: dto.name, icon: dto.icon, colorHex: dto.colorHex)
+                    
+                    // For v2 files: set head category if available
+                    if let headCatName = dto.headCategory {
+                        // Try to find existing head category by name or ID
+                        let headCat: HeadCategory?
+                        if let headCatID = dto.headCategoryID, let existingHead = headCategoryByID[headCatID] {
+                            headCat = existingHead
+                        } else if let existingHead = headCategoryByName[headCatName] {
+                            headCat = existingHead
+                        } else {
+                            // Create new head category
+                            headCat = HeadCategory(name: headCatName, icon: "person.fill", colorHex: "000000")
+                            modelContext.insert(headCat!)
+                            headCategoryByID[headCat!.id] = headCat
+                            headCategoryByName[headCatName] = headCat
+                        }
+                        newCat.headCategory = headCat
+                    }
+                    
+                    // Preserve original UUID
+                    newCat.id = dto.id
                     modelContext.insert(newCat)
-                    categoryMap[dto.name] = newCat
+                    
+                    // Update our maps
+                    categoryByID[newCat.id] = newCat
+                    categoryByNameAndHead[lookupKey] = newCat
                     categoriesAdded += 1
                 }
             }
@@ -141,7 +224,19 @@ final class SettingsViewModel {
 
             for dto in backup.expenses {
                 if !existingExpenseIDs.contains(dto.id) {
-                    let linkedCategory = dto.categoryName.flatMap { categoryMap[$0] }
+                    let linkedCategory: Category?
+                    
+                    // For v2 files: try to find category by ID first
+                    if let categoryID = dto.categoryID, let foundCategory = categoryByID[categoryID] {
+                        linkedCategory = foundCategory
+                    } else if let categoryName = dto.categoryName {
+                        // For v1 files or v2 files without ID: try name+head lookup
+                        let lookupKey = dto.headCategory != nil ? "\(categoryName)|\(dto.headCategory!)" : categoryName
+                        linkedCategory = categoryByNameAndHead[lookupKey] ?? categoryByNameAndHead[categoryName]
+                    } else {
+                        linkedCategory = nil
+                    }
+                    
                     let txType: TransactionType = dto.isTransfer ? .transfer : (dto.isIncome ? .income : .expense)
                     let expense = Expense(
                         amount: dto.amount,
